@@ -3,7 +3,20 @@
         "server-error": "Ett oväntat fel har uppstått"
     },
     "recipe": {
-        "unique-name-error": "Receptnamn måste vara unika"
+        "unique-name-error": "Receptnamn måste vara unika",
+        "recipe-created": "Recept skapat",
+        "recipe-defaults": {
+            "ingredient-note": "1 kopp mjöl",
+            "step-text": "Receptsteg samt andra fält i receptsidan stöder markdown syntax.\n\n**Lägg till en länk**\n\n[Min länk](https://demo.mealie.io)\n"
+        },
+        "servings-text": {
+            "makes": "Portioner",
+            "serves": "Portioner",
+            "serving": "Portion",
+            "servings": "Portioner",
+            "yield": "Ger",
+            "yields": "Ger"
+        }
     },
     "mealplan": {
         "no-recipes-match-your-rules": "Inga recept matchar dina regler"
@@ -31,5 +44,37 @@
         "generic-updated-with-url": "{name} har uppdaterats, {url}",
         "generic-duplicated": "{name} har duplicerats",
         "generic-deleted": "{name} har tagits bort"
+    },
+    "datetime": {
+        "year": "år|år",
+        "day": "dag|dagar",
+        "hour": "timme|timmar",
+        "minute": "minut|minuter",
+        "second": "sekund|sekunder",
+        "millisecond": "millisekund millisekunder",
+        "microsecond": "mikrosekund mikrosekunder"
+    },
+    "emails": {
+        "password": {
+            "subject": "Mealie Glömt Lösenord",
+            "header_text": "Glömt Lösenord",
+            "message_top": "Du har begärt återställning av ditt lösenord.",
+            "message_bottom": "Klicka på knappen ovan för att återställa ditt lösenord.",
+            "button_text": "Återställ Lösenord"
+        },
+        "invitation": {
+            "subject": "Inbjudan till Mealie",
+            "header_text": "Du är inbjuden!",
+            "message_top": "Du har blivit inbjuden till Mealie.",
+            "message_bottom": "Klicka på knappen ovan för att acceptera inbjudan.",
+            "button_text": "Acceptera inbjudan"
+        },
+        "test": {
+            "subject": "Mealie Test Email",
+            "header_text": "Test Email",
+            "message_top": "Detta är ett test email.",
+            "message_bottom": "Klicka på knappen ovan för att testa email.",
+            "button_text": "Öppna Mealie"
+        }
     }
 }

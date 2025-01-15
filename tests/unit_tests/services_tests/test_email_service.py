@@ -4,9 +4,9 @@ from mealie.core.config import get_app_settings
 from mealie.services.email import EmailService
 from mealie.services.email.email_senders import ABCEmailSender
 
-FAKE_ADDRESS = "my_secret_email@email.com"
+FAKE_ADDRESS = "my_secret_email@example.com"
 
-SUBJECTS = {"Mealie Forgot Password", "Invitation to join Mealie", "Test Email"}
+SUBJECTS = {"Mealie Forgot Password", "Invitation to join Mealie", "Mealie Test Email"}
 
 
 class TestEmailSender(ABCEmailSender):

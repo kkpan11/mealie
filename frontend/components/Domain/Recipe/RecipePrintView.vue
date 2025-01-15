@@ -18,7 +18,24 @@
               </v-icon>
               {{ recipe.name }}
             </v-card-title>
-            <RecipeTimeCard :prep-time="recipe.prepTime" :total-time="recipe.totalTime" :perform-time="recipe.performTime" color="white" />
+            <div v-if="recipeYield" class="d-flex justify-space-between align-center px-4 pb-2">
+              <v-chip
+                :small="$vuetify.breakpoint.smAndDown"
+                label
+              >
+                <v-icon left>
+                  {{ $globals.icons.potSteam }}
+                </v-icon>
+                <!-- eslint-disable-next-line vue/no-v-html -->
+                <span v-html="recipeYield"></span>
+              </v-chip>
+            </div>
+            <RecipeTimeCard
+              :prep-time="recipe.prepTime"
+              :total-time="recipe.totalTime"
+              :perform-time="recipe.performTime"
+              color="white"
+            />
             <v-card-text v-if="preferences.showDescription" class="px-0">
               <SafeMarkdown :source="recipe.description" />
             </v-card-text>
@@ -63,7 +80,7 @@
             <h4 v-if="step.title" :key="`instruction-title-${stepIndex}`" class="instruction-title mb-2">
               {{ step.title }}
             </h4>
-            <h5>{{ $t("recipe.step-index", { step: stepIndex + instructionSection.stepOffset + 1 }) }}</h5>
+            <h5>{{ step.summary ? step.summary : $t("recipe.step-index", { step: stepIndex + instructionSection.stepOffset + 1 }) }}</h5>
             <SafeMarkdown :source="step.text" class="recipe-step-body" />
           </div>
         </div>
@@ -83,18 +100,42 @@
         </div>
       </section>
     </div>
+
+    <!-- Nutrition -->
+    <div v-if="preferences.showNutrition">
+      <v-card-title class="headline pl-0"> {{ $t("recipe.nutrition") }} </v-card-title>
+
+      <section>
+        <div class="print-section">
+          <table class="nutrition-table">
+            <tbody>
+              <tr v-for="(value, key) in recipe.nutrition" :key="key">
+                <template v-if="value">
+                  <td>{{ labels[key].label }}</td>
+                  <td>{{ value ? (labels[key].suffix ? `${value} ${labels[key].suffix}` : value) : '-' }}</td>
+                </template>
+              </tr>
+            </tbody>
+          </table>
+      </div>
+    </section>
+    </div>
+
   </div>
 </template>
 
 <script lang="ts">
-import { defineComponent, computed } from "@nuxtjs/composition-api";
+import { computed, defineComponent, useContext } from "@nuxtjs/composition-api";
+import DOMPurify from "dompurify";
 import RecipeTimeCard from "~/components/Domain/Recipe/RecipeTimeCard.vue";
 import { useStaticRoutes } from "~/composables/api";
-import { Recipe, RecipeIngredient, RecipeStep } from "~/lib/api/types/recipe";
+import { Recipe, RecipeIngredient, RecipeStep} from "~/lib/api/types/recipe";
 import { NoUndefinedField } from "~/lib/api/types/non-generated";
 import { ImagePosition, useUserPrintPreferences } from "~/composables/use-users/preferences";
-import { parseIngredientText } from "~/composables/recipes";
+import { parseIngredientText, useNutritionLabels } from "~/composables/recipes";
 import { usePageState } from "~/composables/recipe-page/shared-state";
+import { useScaledAmount } from "~/composables/recipes/use-scaled-amount";
+
 
 type IngredientSection = {
   sectionName: string;
@@ -126,9 +167,39 @@ export default defineComponent({
     }
   },
   setup(props) {
+    const { i18n } = useContext();
     const preferences = useUserPrintPreferences();
     const { recipeImage } = useStaticRoutes();
     const { imageKey } = usePageState(props.recipe.slug);
+    const {labels} = useNutritionLabels();
+
+    function sanitizeHTML(rawHtml: string) {
+      return DOMPurify.sanitize(rawHtml, {
+        USE_PROFILES: { html: true },
+        ALLOWED_TAGS: ["strong", "sup"],
+      });
+    }
+
+    const servingsDisplay = computed(() => {
+      const { scaledAmountDisplay } = useScaledAmount(props.recipe.recipeYieldQuantity, props.scale);
+      return scaledAmountDisplay ? i18n.t("recipe.yields-amount-with-text", {
+        amount: scaledAmountDisplay,
+        text: props.recipe.recipeYield,
+      }) as string : "";
+    })
+
+    const yieldDisplay = computed(() => {
+      const { scaledAmountDisplay } = useScaledAmount(props.recipe.recipeServings, props.scale);
+      return scaledAmountDisplay ? i18n.t("recipe.serves-amount", { amount: scaledAmountDisplay }) as string : "";
+    });
+
+    const recipeYield = computed(() => {
+      if (servingsDisplay.value && yieldDisplay.value) {
+        return sanitizeHTML(`${yieldDisplay.value}; ${servingsDisplay.value}`);
+      } else {
+        return sanitizeHTML(yieldDisplay.value || servingsDisplay.value);
+      }
+    })
 
     const recipeImageUrl = computed(() => {
       return recipeImage(props.recipe.id, props.recipe.image, imageKey.value);
@@ -221,6 +292,7 @@ export default defineComponent({
     }
 
     return {
+      labels,
       hasNotes,
       imageKey,
       ImagePosition,
@@ -228,6 +300,7 @@ export default defineComponent({
       parseIngredientText,
       preferences,
       recipeImageUrl,
+      recipeYield,
       ingredientSections,
       instructionSections,
     };
@@ -290,4 +363,38 @@ li {
   list-style-type: none;
   margin-bottom: 0.25rem;
 }
+
+.nutrition-table {
+  max-width: 80%;
+  border-collapse: collapse;
+}
+
+.nutrition-table th,
+.nutrition-table td {
+  padding: 6px 10px;
+  text-align: left;
+  vertical-align: top;
+  font-size: 14px;
+}
+
+.nutrition-table th {
+  font-weight: bold;
+  padding-bottom: 10px;
+}
+
+.nutrition-table td:first-child {
+  width: 70%;
+  font-weight: bold;
+}
+
+.nutrition-table td:last-child {
+  width: 30%;
+  text-align: right;
+}
+.nutrition-table td {
+  padding: 2px;
+  text-align: left;
+  font-size: 14px;
+}
+
 </style>

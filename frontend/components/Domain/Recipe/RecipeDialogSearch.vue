@@ -31,7 +31,7 @@
           <div class="mr-auto">
             {{ $t("search.results") }}
           </div>
-          <router-link to="/"> {{ $t("search.advanced-search") }} </router-link>
+          <router-link :to="advancedSearchUrl"> {{ $t("search.advanced-search") }} </router-link>
         </v-card-actions>
 
         <RecipeCardMobile
@@ -45,7 +45,6 @@
           :rating="recipe.rating"
           :image="recipe.image"
           :recipe-id="recipe.id"
-          :route="true"
           v-on="$listeners.selected ? { selected: () => handleSelect(recipe) } : {}"
         />
       </v-card>
@@ -54,11 +53,13 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, toRefs, reactive, ref, watch, useRoute } from "@nuxtjs/composition-api";
+import { computed, defineComponent, toRefs, reactive, ref, watch, useContext, useRoute } from "@nuxtjs/composition-api";
 import RecipeCardMobile from "./RecipeCardMobile.vue";
+import { useLoggedInState } from "~/composables/use-logged-in-state";
 import { RecipeSummary } from "~/lib/api/types/recipe";
 import { useUserApi } from "~/composables/api";
 import { useRecipeSearch } from "~/composables/recipes/use-recipe-search";
+import { usePublicExploreApi } from "~/composables/api/api-client";
 const SELECTED_EVENT = "selected";
 export default defineComponent({
   components: {
@@ -66,6 +67,7 @@ export default defineComponent({
   },
 
   setup(_, context) {
+    const { $auth } = useContext();
     const state = reactive({
       loading: false,
       selectedIndex: -1,
@@ -128,7 +130,9 @@ export default defineComponent({
       }
     });
 
+    const groupSlug = computed(() => route.value.params.groupSlug || $auth.user?.groupSlug || "");
     const route = useRoute();
+    const advancedSearchUrl = computed(() => `/g/${groupSlug.value}`)
     watch(route, close);
 
     function open() {
@@ -140,7 +144,8 @@ export default defineComponent({
 
     // ===========================================================================
     // Basic Search
-    const api = useUserApi();
+    const { isOwnGroup } = useLoggedInState();
+    const api = isOwnGroup.value ? useUserApi() : usePublicExploreApi(groupSlug.value).explore;
     const search = useRecipeSearch(api);
 
     // Select Handler
@@ -152,6 +157,7 @@ export default defineComponent({
 
     return {
       ...toRefs(state),
+      advancedSearchUrl,
       dialog,
       open,
       close,

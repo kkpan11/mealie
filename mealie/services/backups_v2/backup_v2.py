@@ -9,8 +9,7 @@ from mealie.services.backups_v2.alchemy_exporter import AlchemyExporter
 from mealie.services.backups_v2.backup_file import BackupFile
 
 
-class BackupSchemaMismatch(Exception):
-    ...
+class BackupSchemaMismatch(Exception): ...
 
 
 class BackupV2(BaseService):
@@ -26,7 +25,7 @@ class BackupV2(BaseService):
         db_file = self.settings.DB_URL.removeprefix("sqlite:///")  # type: ignore
 
         # Create a backup of the SQLite database
-        timestamp = datetime.datetime.now().strftime("%Y.%m.%d")
+        timestamp = datetime.datetime.now(datetime.UTC).strftime("%Y.%m.%d")
         shutil.copy(db_file, self.directories.DATA_DIR.joinpath(f"mealie_{timestamp}.bak.db"))
 
     def _postgres(self) -> None:
@@ -38,7 +37,7 @@ class BackupV2(BaseService):
         exclude_ext = {".zip"}
         exclude_dirs = {"backups", ".temp"}
 
-        timestamp = datetime.datetime.now().strftime("%Y.%m.%d.%H.%M.%S")
+        timestamp = datetime.datetime.now(datetime.UTC).strftime("%Y.%m.%d.%H.%M.%S")
 
         backup_name = f"mealie_{timestamp}.zip"
         backup_file = self.directories.BACKUP_DIR / backup_name
@@ -69,7 +68,7 @@ class BackupV2(BaseService):
             shutil.copytree(f, self.directories.DATA_DIR / f.name)
 
     def restore(self, backup_path: Path) -> None:
-        self.logger.info("initially backup restore")
+        self.logger.info("initializing backup restore")
 
         backup = BackupFile(backup_path)
 
@@ -83,7 +82,7 @@ class BackupV2(BaseService):
             # Validation
             if not contents.validate():
                 self.logger.error(
-                    "Invalid backup file. file does not contain required elements (data directory and database.json"
+                    "Invalid backup file. file does not contain required elements (data directory and database.json)"
                 )
                 raise ValueError("Invalid backup file")
 

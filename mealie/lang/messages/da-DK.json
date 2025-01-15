@@ -3,7 +3,20 @@
         "server-error": "Der opstod en uventet fejl"
     },
     "recipe": {
-        "unique-name-error": "Opskriftsnavnet er allerede i brug"
+        "unique-name-error": "Opskriftsnavnet er allerede i brug",
+        "recipe-created": "Opskrift oprettet",
+        "recipe-defaults": {
+            "ingredient-note": "1 kop mel",
+            "step-text": "Du kan bruge markdown kode i beskrivelser og andre felter i opskrifter.\n\n**Tilføj et link**\n\n[Mit link](https://demo.mealie.io)\n"
+        },
+        "servings-text": {
+            "makes": "Makes",
+            "serves": "Serves",
+            "serving": "Servering",
+            "servings": "Portioner",
+            "yield": "Yield",
+            "yields": "Yields"
+        }
     },
     "mealplan": {
         "no-recipes-match-your-rules": "Ingen opskrifter matcher dine regler"
@@ -12,7 +25,7 @@
         "user-updated": "Bruger opdateret",
         "password-updated": "Adgangskoden blev opdateret",
         "invalid-current-password": "Ugyldig nuværende adgangskode",
-        "ldap-update-password-unavailable": "Unable to update password, user is controlled by LDAP"
+        "ldap-update-password-unavailable": "Kan ikke opdatere adgangskoden, brugeren styres af LDAP"
     },
     "group": {
         "report-deleted": "Rapporten er slettet."
@@ -31,5 +44,37 @@
         "generic-updated-with-url": "{name} er blevet opdateret, {url}",
         "generic-duplicated": "{name} er blevet dublikeret",
         "generic-deleted": "{name} er blevet slettet"
+    },
+    "datetime": {
+        "year": "år|år",
+        "day": "dag|dage",
+        "hour": "time|timer",
+        "minute": "minut|minutter",
+        "second": "sekund|sekunder",
+        "millisecond": "millisekund|millisekunder",
+        "microsecond": "mikrosekund|mikrosekunder"
+    },
+    "emails": {
+        "password": {
+            "subject": "Mealie glemt adgangskode",
+            "header_text": "Glemt adgangskode",
+            "message_top": "Du har anmodet om at nulstille din adgangskode.",
+            "message_bottom": "Klik på knappen ovenfor for at nulstille din adgangskode.",
+            "button_text": "Nulstil adgangskoden"
+        },
+        "invitation": {
+            "subject": "Invitation til at deltage i Mealie",
+            "header_text": "Du er Inviteret!",
+            "message_top": "Du er blevet inviteret til Mealie.",
+            "message_bottom": "Klik på knappen ovenfor for at acceptere invitationen.",
+            "button_text": "Acceptér invitation"
+        },
+        "test": {
+            "subject": "E-mail-test fra Mealie",
+            "header_text": "Test E-mail",
+            "message_top": "Dette er en test e-mail.",
+            "message_bottom": "Klik på knappen ovenfor for at teste e-mailen.",
+            "button_text": "Åbn Mealie"
+        }
     }
 }

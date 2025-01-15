@@ -34,8 +34,8 @@ class MealieCrudRoute(APIRoute):
             with contextlib.suppress(JSONDecodeError):
                 response = await original_route_handler(request)
                 response_body = json.loads(response.body)
-                if type(response_body) == dict:
-                    if last_modified := response_body.get("updateAt"):
+                if isinstance(response_body, dict):
+                    if last_modified := response_body.get("updatedAt"):
                         response.headers["last-modified"] = last_modified
 
                         # Force no-cache for all responses to prevent browser from caching API calls

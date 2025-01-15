@@ -3,6 +3,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Callable
 from typing import Any
 
+import bs4
 import extruct
 from fastapi import HTTPException, status
 from httpx import AsyncClient
@@ -10,13 +11,24 @@ from recipe_scrapers import NoSchemaFoundInWildMode, SchemaScraperFactory, scrap
 from slugify import slugify
 from w3lib.html import get_base_url
 
+from mealie.core.config import get_app_settings
 from mealie.core.root_logger import get_logger
+from mealie.lang.providers import Translator
+from mealie.pkgs import safehttp
 from mealie.schema.recipe.recipe import Recipe, RecipeStep
+from mealie.services.openai import OpenAIService
 from mealie.services.scraper.scraped_extras import ScrapedExtras
 
 from . import cleaner
 
-_FIREFOX_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:86.0) Gecko/20100101 Firefox/86.0"
+try:
+    from recipe_scrapers._abstract import HEADERS
+
+    _FIREFOX_UA = HEADERS["User-Agent"]
+except (ImportError, KeyError):
+    _FIREFOX_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:123.0) Gecko/20100101 Firefox/128.0"
+
+
 SCRAPER_TIMEOUT = 15
 
 
@@ -30,9 +42,11 @@ async def safe_scrape_html(url: str) -> str:
     if the request takes longer than 15 seconds. This is used to mitigate
     DDOS attacks from users providing a url with arbitrary large content.
     """
-    async with AsyncClient() as client:
+    async with AsyncClient(transport=safehttp.AsyncSafeTransport()) as client:
         html_bytes = b""
-        async with client.stream("GET", url, timeout=SCRAPER_TIMEOUT, headers={"User-Agent": _FIREFOX_UA}) as resp:
+        async with client.stream(
+            "GET", url, timeout=SCRAPER_TIMEOUT, headers={"User-Agent": _FIREFOX_UA}, follow_redirects=True
+        ) as resp:
             start_time = time.time()
 
             async for chunk in resp.aiter_bytes(chunk_size=1024):
@@ -77,13 +91,19 @@ class ABCScraperStrategy(ABC):
 
     url: str
 
-    def __init__(self, url: str) -> None:
+    def __init__(
+        self,
+        url: str,
+        translator: Translator,
+        raw_html: str | None = None,
+    ) -> None:
         self.logger = get_logger()
         self.url = url
+        self.raw_html = raw_html
+        self.translator = translator
 
     @abstractmethod
-    async def get_html(self, url: str) -> str:
-        ...
+    async def get_html(self, url: str) -> str: ...
 
     @abstractmethod
     async def parse(self) -> tuple[Recipe, ScrapedExtras] | tuple[None, None]:
@@ -99,11 +119,25 @@ class ABCScraperStrategy(ABC):
 
 
 class RecipeScraperPackage(ABCScraperStrategy):
+    @staticmethod
+    def ld_json_to_html(ld_json: str) -> str:
+        return (
+            "<!DOCTYPE html><html><head>"
+            f'<script type="application/ld+json">{ld_json}</script>'
+            "</head><body></body></html>"
+        )
+
     async def get_html(self, url: str) -> str:
-        return await safe_scrape_html(url)
+        return self.raw_html or await safe_scrape_html(url)
 
     def clean_scraper(self, scraped_data: SchemaScraperFactory.SchemaScraper, url: str) -> tuple[Recipe, ScrapedExtras]:
-        def try_get_default(func_call: Callable | None, get_attr: str, default: Any, clean_func=None):
+        def try_get_default(
+            func_call: Callable | None,
+            get_attr: str,
+            default: Any,
+            clean_func=None,
+            **clean_func_kwargs,
+        ):
             value = default
 
             if func_call:
@@ -119,13 +153,15 @@ class RecipeScraperPackage(ABCScraperStrategy):
                     self.logger.error(f"Error parsing recipe attribute '{get_attr}'")
 
             if clean_func:
-                value = clean_func(value)
+                value = clean_func(value, **clean_func_kwargs)
 
             return value
 
         def get_instructions() -> list[RecipeStep]:
             instruction_as_text = try_get_default(
-                scraped_data.instructions, "recipeInstructions", ["No Instructions Found"]
+                scraped_data.instructions,
+                "recipeInstructions",
+                ["No Instructions Found"],
             )
 
             self.logger.debug(f"Scraped Instructions: (Type: {type(instruction_as_text)}) \n {instruction_as_text}")
@@ -139,9 +175,9 @@ class RecipeScraperPackage(ABCScraperStrategy):
             except TypeError:
                 return []
 
-        cook_time = try_get_default(None, "performTime", None, cleaner.clean_time) or try_get_default(
-            None, "cookTime", None, cleaner.clean_time
-        )
+        cook_time = try_get_default(
+            None, "performTime", None, cleaner.clean_time, translator=self.translator
+        ) or try_get_default(None, "cookTime", None, cleaner.clean_time, translator=self.translator)
 
         extras = ScrapedExtras()
 
@@ -155,13 +191,16 @@ class RecipeScraperPackage(ABCScraperStrategy):
             nutrition=try_get_default(None, "nutrition", None, cleaner.clean_nutrition),
             recipe_yield=try_get_default(scraped_data.yields, "recipeYield", "1", cleaner.clean_string),
             recipe_ingredient=try_get_default(
-                scraped_data.ingredients, "recipeIngredient", [""], cleaner.clean_ingredients
+                scraped_data.ingredients,
+                "recipeIngredient",
+                [""],
+                cleaner.clean_ingredients,
             ),
             recipe_instructions=get_instructions(),
-            total_time=try_get_default(None, "totalTime", None, cleaner.clean_time),
-            prep_time=try_get_default(None, "prepTime", None, cleaner.clean_time),
+            total_time=try_get_default(None, "totalTime", None, cleaner.clean_time, translator=self.translator),
+            prep_time=try_get_default(None, "prepTime", None, cleaner.clean_time, translator=self.translator),
             perform_time=cook_time,
-            org_url=url,
+            org_url=url or try_get_default(None, "url", None, cleaner.clean_string),
         )
 
         return recipe, extras
@@ -170,9 +209,10 @@ class RecipeScraperPackage(ABCScraperStrategy):
         recipe_html = await self.get_html(self.url)
 
         try:
-            scraped_schema = scrape_html(recipe_html, org_url=self.url)
+            # scrape_html requires a URL, but we might not have one, so we default to a dummy URL
+            scraped_schema = scrape_html(recipe_html, org_url=self.url or "https://example.com", supported_only=False)
         except (NoSchemaFoundInWildMode, AttributeError):
-            self.logger.error("Recipe Scraper was unable to extract a recipe.")
+            self.logger.error(f"Recipe Scraper was unable to extract a recipe from {self.url}")
             return None
 
         except ConnectionError as e:
@@ -207,13 +247,94 @@ class RecipeScraperPackage(ABCScraperStrategy):
         return self.clean_scraper(scraped_data, self.url)
 
 
-class RecipeScraperOpenGraph(ABCScraperStrategy):
+class RecipeScraperOpenAI(RecipeScraperPackage):
     """
-    Abstract class for all recipe parsers.
+    A wrapper around the `RecipeScraperPackage` class that uses OpenAI to extract the recipe from the URL,
+    rather than trying to scrape it directly.
     """
 
+    def extract_json_ld_data_from_html(self, soup: bs4.BeautifulSoup) -> str:
+        data_parts: list[str] = []
+        for script in soup.find_all("script", type="application/ld+json"):
+            try:
+                script_data = script.string
+                if script_data:
+                    data_parts.append(str(script_data))
+            except AttributeError:
+                pass
+
+        return "\n\n".join(data_parts)
+
+    def find_image(self, soup: bs4.BeautifulSoup) -> str | None:
+        # find the open graph image tag
+        og_image = soup.find("meta", property="og:image")
+        if og_image and og_image.get("content"):
+            return og_image["content"]
+
+        # find the largest image on the page
+        largest_img = None
+        max_size = 0
+        for img in soup.find_all("img"):
+            width = img.get("width", 0)
+            height = img.get("height", 0)
+            if not width or not height:
+                continue
+
+            try:
+                size = int(width) * int(height)
+            except (ValueError, TypeError):
+                size = 1
+            if size > max_size:
+                max_size = size
+                largest_img = img
+
+        if largest_img:
+            return largest_img.get("src")
+
+        return None
+
+    def format_html_to_text(self, html: str) -> str:
+        soup = bs4.BeautifulSoup(html, "lxml")
+
+        text = soup.get_text(separator="\n", strip=True)
+        text += self.extract_json_ld_data_from_html(soup)
+        if not text:
+            raise Exception("No text or ld+json data found in HTML")
+
+        try:
+            image = self.find_image(soup)
+        except Exception:
+            image = None
+
+        components = [f"Convert this content to JSON: {text}"]
+        if image:
+            components.append(f"Recipe Image: {image}")
+        return "\n".join(components)
+
     async def get_html(self, url: str) -> str:
-        return await safe_scrape_html(url)
+        settings = get_app_settings()
+        if not settings.OPENAI_ENABLED:
+            return ""
+
+        html = self.raw_html or await safe_scrape_html(url)
+        text = self.format_html_to_text(html)
+        try:
+            service = OpenAIService()
+            prompt = service.get_prompt("recipes.scrape-recipe")
+
+            response_json = await service.get_response(prompt, text, force_json_response=True)
+            if not response_json:
+                raise Exception("OpenAI did not return any data")
+
+            return self.ld_json_to_html(response_json)
+        except Exception:
+            self.logger.exception(f"OpenAI was unable to extract a recipe from {url}")
+            return ""
+
+
+class RecipeScraperOpenGraph(ABCScraperStrategy):
+    async def get_html(self, url: str) -> str:
+        return self.raw_html or await safe_scrape_html(url)
 
     def get_recipe_fields(self, html) -> dict | None:
         """
@@ -241,7 +362,7 @@ class RecipeScraperOpenGraph(ABCScraperStrategy):
             "recipeIngredient": ["Could not detect ingredients"],
             "recipeInstructions": [{"text": "Could not detect instructions"}],
             "slug": slugify(og_field(properties, "og:title")),
-            "orgURL": og_field(properties, "og:url"),
+            "orgURL": self.url or og_field(properties, "og:url"),
             "categories": [],
             "tags": og_fields(properties, "og:article:tag"),
             "dateAdded": None,

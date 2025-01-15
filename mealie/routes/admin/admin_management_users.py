@@ -14,7 +14,7 @@ from mealie.schema.user.user_passwords import ForgotPassword, PasswordResetToken
 from mealie.services.user_services.password_reset_service import PasswordResetService
 from mealie.services.user_services.user_service import UserService
 
-router = APIRouter(prefix="/users", tags=["Admin: Users"])
+router = APIRouter(prefix="/users")
 
 
 @controller(router)
@@ -37,7 +37,7 @@ class AdminUserManagementRoutes(BaseAdminController):
             override=UserOut,
         )
 
-        response.set_pagination_guides(router.url_path_for("get_all"), q.dict())
+        response.set_pagination_guides(router.url_path_for("get_all"), q.model_dump())
         return response
 
     @router.post("", response_model=UserOut, status_code=201)

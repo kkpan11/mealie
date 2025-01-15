@@ -1,14 +1,14 @@
 <template>
   <v-navigation-drawer v-model="drawer" class="d-flex flex-column d-print-none" clipped app width="240px">
     <!-- User Profile -->
-    <template v-if="$auth.user">
-      <v-list-item two-line to="/user/profile" exact>
-        <UserAvatar list :user-id="$auth.user.id" />
+    <template v-if="loggedIn">
+      <v-list-item two-line :to="userProfileLink" exact>
+        <UserAvatar list :user-id="$auth.user.id" :tooltip="false" />
 
         <v-list-item-content>
           <v-list-item-title class="pr-2"> {{ $auth.user.fullName }}</v-list-item-title>
           <v-list-item-subtitle>
-            <v-btn class="px-2 pa-0" text :to="`/user/${$auth.user.id}/favorites`" small>
+            <v-btn v-if="isOwnGroup" class="px-2 pa-0" text :to="userFavoritesLink" small>
               <v-icon left small>
                 {{ $globals.icons.heart }}
               </v-icon>
@@ -26,11 +26,11 @@
     <template v-if="topLink">
       <v-list nav dense>
         <template v-for="nav in topLink">
-          <div v-if="!nav.restricted || loggedIn" :key="nav.title">
+          <div v-if="!nav.restricted || isOwnGroup" :key="nav.key || nav.title">
             <!-- Multi Items -->
             <v-list-group
               v-if="nav.children"
-              :key="nav.title + 'multi-item'"
+              :key="(nav.key || nav.title) + 'multi-item'"
               v-model="dropDowns[nav.title]"
               color="primary"
               :prepend-icon="nav.icon"
@@ -39,19 +39,18 @@
                 <v-list-item-title>{{ nav.title }}</v-list-item-title>
               </template>
 
-              <v-list-item v-for="child in nav.children" :key="child.title" exact :to="child.to">
+              <v-list-item v-for="child in nav.children" :key="child.key || child.title" exact :to="child.to" class="ml-2">
                 <v-list-item-icon>
                   <v-icon>{{ child.icon }}</v-icon>
                 </v-list-item-icon>
                 <v-list-item-title>{{ child.title }}</v-list-item-title>
               </v-list-item>
-              <v-divider class="mb-4"></v-divider>
             </v-list-group>
 
             <!-- Single Item -->
             <v-list-item-group
               v-else
-              :key="nav.title + 'single-item'"
+              :key="(nav.key || nav.title) + 'single-item'"
               v-model="secondarySelected"
               color="primary"
             >
@@ -68,18 +67,15 @@
     </template>
 
     <!-- Secondary Links -->
-    <template v-if="secondaryLinks">
-      <v-subheader v-if="secondaryHeader" :to="secondaryHeaderLink" class="pb-0">
-        {{ secondaryHeader }}
-      </v-subheader>
-      <v-divider></v-divider>
+    <template v-if="secondaryLinks.length > 0">
+      <v-divider class="mt-2"></v-divider>
       <v-list nav dense exact>
         <template v-for="nav in secondaryLinks">
-          <div v-if="!nav.restricted || loggedIn" :key="nav.title">
+          <div v-if="!nav.restricted || isOwnGroup" :key="nav.key || nav.title">
             <!-- Multi Items -->
             <v-list-group
               v-if="nav.children"
-              :key="nav.title + 'multi-item'"
+              :key="(nav.key || nav.title) + 'multi-item'"
               v-model="dropDowns[nav.title]"
               color="primary"
               :prepend-icon="nav.icon"
@@ -88,17 +84,16 @@
                 <v-list-item-title>{{ nav.title }}</v-list-item-title>
               </template>
 
-              <v-list-item v-for="child in nav.children" :key="child.title" exact :to="child.to">
+              <v-list-item v-for="child in nav.children" :key="child.key || child.title" exact :to="child.to" class="ml-2">
                 <v-list-item-icon>
                   <v-icon>{{ child.icon }}</v-icon>
                 </v-list-item-icon>
                 <v-list-item-title>{{ child.title }}</v-list-item-title>
               </v-list-item>
-              <v-divider class="mb-4"></v-divider>
             </v-list-group>
 
             <!-- Single Item -->
-            <v-list-item-group v-else :key="nav.title + 'single-item'" v-model="secondarySelected" color="primary">
+            <v-list-item-group v-else :key="(nav.key || nav.title) + 'single-item'" v-model="secondarySelected" color="primary">
               <v-list-item exact link :to="nav.to">
                 <v-list-item-icon>
                   <v-icon>{{ nav.icon }}</v-icon>
@@ -116,9 +111,9 @@
       <v-list nav dense>
         <v-list-item-group v-model="bottomSelected" color="primary">
           <template v-for="nav in bottomLinks">
-            <div v-if="!nav.restricted || loggedIn" :key="nav.title">
+            <div v-if="!nav.restricted || isOwnGroup" :key="nav.key || nav.title">
               <v-list-item
-                :key="nav.title"
+                :key="nav.key || nav.title"
                 exact
                 link
                 :to="nav.to || null"
@@ -140,7 +135,8 @@
 </template>
 
 <script lang="ts">
-import { computed, defineComponent, reactive, toRefs, useContext } from "@nuxtjs/composition-api";
+import { computed, defineComponent, reactive, toRefs, useContext, watch } from "@nuxtjs/composition-api";
+import { useLoggedInState } from "~/composables/use-logged-in-state";
 import { SidebarLinks } from "~/types/application-types";
 import UserAvatar from "~/components/Domain/User/UserAvatar.vue";
 
@@ -171,14 +167,6 @@ export default defineComponent({
       required: false,
       default: null,
     },
-    secondaryHeader: {
-      type: String,
-      default: null,
-    },
-    secondaryHeaderLink: {
-      type: String,
-      default: null,
-    },
   },
   setup(props, context) {
     // V-Model Support
@@ -198,20 +186,42 @@ export default defineComponent({
     });
 
     const { $auth } = useContext();
-    const loggedIn = computed(() => $auth.loggedIn);
+    const { loggedIn, isOwnGroup } = useLoggedInState();
+
+    const userFavoritesLink = computed(() => $auth.user ? `/user/${$auth.user.id}/favorites` : undefined);
+    const userProfileLink = computed(() => $auth.user ? "/user/profile" : undefined);
 
     const state = reactive({
-      dropDowns: {},
+      dropDowns: {} as Record<string, boolean>,
       topSelected: null as string[] | null,
       secondarySelected: null as string[] | null,
       bottomSelected: null as string[] | null,
       hasOpenedBefore: false as boolean,
     });
 
+    const allLinks = computed(() => [...props.topLink, ...(props.secondaryLinks || []), ...(props.bottomLinks || [])]);
+    function initDropdowns() {
+      allLinks.value.forEach((link) => {
+        state.dropDowns[link.title] = link.childrenStartExpanded || false;
+      })
+    }
+    watch(
+      () => allLinks,
+      () => {
+        initDropdowns();
+      },
+      {
+        deep: true,
+      }
+    );
+
     return {
       ...toRefs(state),
+      userFavoritesLink,
+      userProfileLink,
       drawer,
       loggedIn,
+      isOwnGroup,
     };
   },
 });

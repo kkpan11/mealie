@@ -1,11 +1,11 @@
 import contextlib
 from pathlib import Path
-from uuid import UUID
 
 from pydantic import UUID4
 
 from mealie.core import root_logger
 from mealie.core.exceptions import UnexpectedNone
+from mealie.lang.providers import Translator
 from mealie.repos.all_repositories import AllRepositories
 from mealie.schema.recipe import Recipe
 from mealie.schema.recipe.recipe_settings import RecipeSettings
@@ -13,6 +13,7 @@ from mealie.schema.reports.reports import (
     ReportCategory,
     ReportCreate,
     ReportEntryCreate,
+    ReportEntryOut,
     ReportOut,
     ReportSummary,
     ReportSummaryStatus,
@@ -35,22 +36,36 @@ class BaseMigrator(BaseService):
     helpers: DatabaseMigrationHelpers
 
     def __init__(
-        self, archive: Path, db: AllRepositories, session, user_id: UUID4, group_id: UUID, add_migration_tag: bool
+        self,
+        archive: Path,
+        db: AllRepositories,
+        session,
+        user_id: UUID4,
+        household_id: UUID4,
+        group_id: UUID4,
+        add_migration_tag: bool,
+        translator: Translator,
     ):
         self.archive = archive
         self.db = db
         self.session = session
         self.add_migration_tag = add_migration_tag
+        self.translator = translator
 
         user = db.users.get_one(user_id)
         if not user:
             raise UnexpectedNone(f"Cannot find user {user_id}")
+
+        household = db.households.get_one(household_id)
+        if not household:
+            raise UnexpectedNone(f"Cannot find household {household_id}")
 
         group = db.groups.get_one(group_id)
         if not group:
             raise UnexpectedNone(f"Cannot find group {group_id}")
 
         self.user = user
+        self.household = household
         self.group = group
 
         self.name = "migration"
@@ -59,10 +74,32 @@ class BaseMigrator(BaseService):
 
         self.logger = root_logger.get_logger()
 
-        self.helpers = DatabaseMigrationHelpers(self.db, self.session, self.group.id, self.user.id)
-        self.recipe_service = RecipeService(db, user, group)
+        self.helpers = DatabaseMigrationHelpers(self.db, self.session)
+        self.recipe_service = RecipeService(db, user, household, translator=self.translator)
 
         super().__init__()
+
+    @classmethod
+    def get_zip_base_path(cls, path: Path) -> Path:
+        # Safari mangles our ZIP structure and adds a "__MACOSX" directory at the root along with
+        # an arbitrarily-named directory containing the actual contents. So, if we find a dunder directory
+        # at the root (i.e. __MACOSX) we traverse down the first non-dunder directory and assume this is the base.
+        # We assume migration exports never contain a directory that starts with "__".
+        normal_dirs: list[Path] = []
+        dunder_dirs: list[Path] = []
+        for dir in path.iterdir():
+            if not dir.is_dir():
+                continue
+
+            if dir.name.startswith("__"):
+                dunder_dirs.append(dir)
+            else:
+                normal_dirs.append(dir)
+
+        if len(normal_dirs) == 1 and len(dunder_dirs) == 1:
+            return normal_dirs[0]
+        else:
+            return path
 
     def _migrate(self) -> None:
         raise NotImplementedError
@@ -82,6 +119,7 @@ class BaseMigrator(BaseService):
         is_success = True
         is_failure = True
 
+        new_entries: list[ReportEntryOut] = []
         for entry in self.report_entries:
             if is_failure and entry.success:
                 is_failure = False
@@ -89,7 +127,7 @@ class BaseMigrator(BaseService):
             if is_success and not entry.success:
                 is_success = False
 
-            self.db.group_report_entries.create(entry)
+            new_entries.append(self.db.group_report_entries.create(entry))
 
         if is_success:
             self.report.status = ReportSummaryStatus.success
@@ -100,6 +138,7 @@ class BaseMigrator(BaseService):
         if not is_success and not is_failure:
             self.report.status = ReportSummaryStatus.partial
 
+        self.report.entries = new_entries
         self.db.group_reports.update(self.report.id, self.report)
 
     def migrate(self, report_name: str) -> ReportSummary:
@@ -129,16 +168,16 @@ class BaseMigrator(BaseService):
 
         return_vars: list[tuple[str, UUID4, bool]] = []
 
-        if not self.group.preferences:
-            raise ValueError("Group preferences not found")
+        if not self.household.preferences:
+            raise ValueError("Household preferences not found")
 
         default_settings = RecipeSettings(
-            public=self.group.preferences.recipe_public,
-            show_nutrition=self.group.preferences.recipe_show_nutrition,
-            show_assets=self.group.preferences.recipe_show_assets,
-            landscape_view=self.group.preferences.recipe_landscape_view,
-            disable_comments=self.group.preferences.recipe_disable_comments,
-            disable_amount=self.group.preferences.recipe_disable_amount,
+            public=self.household.preferences.recipe_public,
+            show_nutrition=self.household.preferences.recipe_show_nutrition,
+            show_assets=self.household.preferences.recipe_show_assets,
+            landscape_view=self.household.preferences.recipe_landscape_view,
+            disable_comments=self.household.preferences.recipe_disable_comments,
+            disable_amount=self.household.preferences.recipe_disable_amount,
         )
 
         for recipe in validated_recipes:
@@ -209,7 +248,11 @@ class BaseMigrator(BaseService):
                 continue
 
             if alias.func:
-                prop_value = alias.func(prop_value)
+                try:
+                    prop_value = alias.func(prop_value)
+                except Exception as e:
+                    self.logger.exception(e)
+                    continue
 
             recipe_dict[alias.key] = prop_value
 
@@ -225,6 +268,5 @@ class BaseMigrator(BaseService):
         with contextlib.suppress(KeyError):
             del recipe_dict["id"]
 
-        recipe_dict = cleaner.clean(recipe_dict, url=recipe_dict.get("org_url", None))
-
-        return Recipe(**recipe_dict)
+        recipe = cleaner.clean(recipe_dict, self.translator, url=recipe_dict.get("org_url", None))
+        return recipe

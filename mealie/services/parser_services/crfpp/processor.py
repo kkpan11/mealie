@@ -1,9 +1,12 @@
+import os
 import subprocess
 import tempfile
 from fractions import Fraction
 from pathlib import Path
+from typing import Annotated
 
-from pydantic import BaseModel, validator
+from pydantic import BaseModel, Field, field_validator
+from pydantic_core.core_schema import ValidationInfo
 
 from mealie.schema._mealie.types import NoneFloat
 
@@ -11,7 +14,7 @@ from . import utils
 from .pre_processor import pre_process_string
 
 CWD = Path(__file__).parent
-MODEL_PATH = CWD / "model.crfmodel"
+MODEL_PATH = os.getenv("CRF_MODEL_PATH", default=CWD / "model.crfmodel")
 
 
 class CRFConfidence(BaseModel):
@@ -19,31 +22,31 @@ class CRFConfidence(BaseModel):
     comment: NoneFloat = None
     name: NoneFloat = None
     unit: NoneFloat = None
-    qty: NoneFloat = None
+    qty: Annotated[NoneFloat, Field(validate_default=True)] = None
 
 
 class CRFIngredient(BaseModel):
     input: str = ""
     name: str = ""
     other: str = ""
-    qty: str = ""
+    qty: Annotated[str, Field(validate_default=True)] = ""
     comment: str = ""
     unit: str = ""
     confidence: CRFConfidence
 
-    @validator("qty", always=True, pre=True)
-    def validate_qty(qty, values):  # sourcery skip: merge-nested-ifs
-        if qty is None or qty == "":
-            # Check if other contains a fraction
-            try:
-                if values["other"] is not None and values["other"].find("/") != -1:
-                    return round(float(Fraction(values["other"])), 3)
-                else:
-                    return 1
-            except Exception:
-                pass
+    @field_validator("qty", mode="before")
+    def validate_qty(cls, qty, info: ValidationInfo):
+        if qty is not None and qty != "":
+            return qty
 
-        return qty
+        # Check if other contains a fraction
+        try:
+            if info.data["other"] is not None and info.data["other"].find("/") != -1:
+                return str(round(float(Fraction(info.data["other"])), 3))
+            else:
+                return "0"
+        except Exception:
+            return ""
 
 
 def _exec_crf_test(input_text):

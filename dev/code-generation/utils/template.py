@@ -1,10 +1,9 @@
 import logging
 import re
+import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
-import black
-import isort
 from jinja2 import Template
 from rich.logging import RichHandler
 
@@ -23,10 +22,12 @@ def render_python_template(template_file: Path | str, dest: Path, data: dict):
 
     text = tplt.render(data=data)
 
-    text = black.format_str(text, mode=black.FileMode())
-
     dest.write_text(text)
-    isort.file(dest)
+
+    # lint/format file with Ruff
+    log.info(f"Formatting {dest}")
+    subprocess.run(["poetry", "run", "ruff", "check", str(dest), "--fix"])
+    subprocess.run(["poetry", "run", "ruff", "format", str(dest)])
 
 
 @dataclass
@@ -50,7 +51,7 @@ class CodeSlicer:
         self._next_line += 1
 
 
-def get_indentation_of_string(line: str, comment_char: str = "//") -> str:
+def get_indentation_of_string(line: str, comment_char: str = "//|#") -> str:
     return re.sub(rf"{comment_char}.*", "", line).removesuffix("\n")
 
 

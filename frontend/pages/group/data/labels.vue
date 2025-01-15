@@ -17,6 +17,7 @@
       v-model="state.editDialog"
       :icon="$globals.icons.tags"
       :title="$t('data-pages.labels.edit-label')"
+      :submit-icon="$globals.icons.save"
       :submit-text="$tc('general.save')"
       @submit="editSaveLabel"
     >
@@ -39,6 +40,34 @@
     >
       <v-card-text>
         {{ $t("general.confirm-delete-generic") }}
+        <v-row>
+          <MultiPurposeLabel v-if="deleteTarget" class="mt-4 ml-4 mb-1" :label="deleteTarget" />
+        </v-row>
+      </v-card-text>
+    </BaseDialog>
+
+    <!-- Bulk Delete Dialog -->
+    <BaseDialog
+      v-model="state.bulkDeleteDialog"
+      width="650px"
+      :title="$tc('general.confirm')"
+      :icon="$globals.icons.alertCircle"
+      color="error"
+      @confirm="deleteSelected"
+    >
+      <v-card-text>
+        <p class="h4">{{ $t('general.confirm-delete-generic-items') }}</p>
+        <v-card outlined>
+          <v-virtual-scroll height="400" item-height="25" :items="bulkDeleteTarget">
+            <template #default="{ item }">
+              <v-list-item class="pb-2">
+                <v-list-item-content>
+                  <v-list-item-title>{{ item.name }}</v-list-item-title>
+                </v-list-item-content>
+              </v-list-item>
+            </template>
+          </v-virtual-scroll>
+        </v-card>
       </v-card-text>
     </BaseDialog>
 
@@ -79,21 +108,20 @@
       </v-card-text>
     </BaseDialog>
 
-    <!-- Recipe Data Table -->
+    <!-- Data Table -->
     <BaseCardSectionTitle :icon="$globals.icons.tags" section :title="$tc('data-pages.labels.labels')"> </BaseCardSectionTitle>
     <CrudTable
       :table-config="tableConfig"
       :headers.sync="tableHeaders"
       :data="labels || []"
-      :bulk-actions="[]"
+      :bulk-actions="[{icon: $globals.icons.delete, text: $tc('general.delete'), event: 'delete-selected'}]"
+      initial-sort="name"
       @delete-one="deleteEventHandler"
       @edit-one="editEventHandler"
+      @delete-selected="bulkDeleteEventHandler"
     >
       <template #button-row>
-        <BaseButton create @click="state.createDialog = true">
-          <template #icon> {{ $globals.icons.tags }} </template>
-          {{ $t("general.create") }}
-        </BaseButton>
+        <BaseButton create @click="state.createDialog = true">{{ $t("general.create") }}</BaseButton>
       </template>
       <template #item.name="{ item }">
         <MultiPurposeLabel v-if="item" :label="item">
@@ -146,6 +174,7 @@ export default defineComponent({
       createDialog: false,
       editDialog: false,
       deleteDialog: false,
+      bulkDeleteDialog: false,
     });
 
     // ============================================================
@@ -179,6 +208,21 @@ export default defineComponent({
       state.deleteDialog = false;
     }
 
+    // Bulk Delete
+    const bulkDeleteTarget = ref<MultiPurposeLabelSummary[]>([]);
+
+    function bulkDeleteEventHandler(selection: MultiPurposeLabelSummary[]) {
+      bulkDeleteTarget.value = selection;
+      state.bulkDeleteDialog = true;
+    }
+
+    async function deleteSelected() {
+      for (const item of bulkDeleteTarget.value) {
+        await labelStore.actions.deleteOne(item.id);
+      }
+      bulkDeleteTarget.value = [];
+    }
+
     // Edit
 
     const editLabel = ref<MultiPurposeLabelSummary | null>(null);
@@ -188,7 +232,7 @@ export default defineComponent({
       editLabel.value = item;
 
       if (!editLabel.value.color) {
-        editLabel.value.color = "#E0E0E0";
+        editLabel.value.color = "#959595";
       }
     }
 
@@ -228,16 +272,25 @@ export default defineComponent({
       state,
       tableConfig,
       tableHeaders,
-      labels: labelStore.labels,
+      labels: labelStore.store,
       validators,
 
-      deleteEventHandler,
-      deleteLabel,
+      // create
+      createLabel,
+      createLabelData: labelData.data,
+
+      // edit
       editLabel,
       editEventHandler,
       editSaveLabel,
-      createLabel,
-      createLabelData: labelData.data,
+
+      // delete
+      deleteEventHandler,
+      deleteLabel,
+      deleteTarget,
+      bulkDeleteEventHandler,
+      deleteSelected,
+      bulkDeleteTarget,
 
       // Seed
       seedDatabase,

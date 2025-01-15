@@ -3,7 +3,7 @@
     <BasePageTitle divider>
       <template #header>
         <div class="d-flex flex-column align-center justify-center">
-          <UserAvatar size="96" :user-id="$auth.user.id" />
+          <UserAvatar :tooltip="false" size="96" :user-id="$auth.user.id" />
           <AppButtonUpload
             class="my-1"
             file-name="profile"
@@ -13,7 +13,7 @@
           />
         </div>
       </template>
-      <template #title> Your Profile Settings </template>
+      <template #title> {{ $t("profile.user-settings") }} </template>
     </BasePageTitle>
 
     <section class="mt-5">
@@ -108,14 +108,14 @@
         :label="$t('profile.show-advanced-description')"
         @change="updateUser"
       ></v-checkbox>
+      <nuxt-link class="mt-5 d-flex flex-column justify-center text-center" :to="`/group`"> {{ $t('profile.looking-for-privacy-settings') }} </nuxt-link>
       <div class="d-flex flex-wrap justify-center mt-5">
-        <v-btn outlined class="rounded-xl my-1 mx-1" to="/user/profile" nuxt exact>
+        <v-btn outlined class="rounded-xl my-1 mx-1" :to="`/user/profile`" nuxt exact>
           <v-icon left>
             {{ $globals.icons.backArrow }}
           </v-icon>
           {{ $t('profile.back-to-profile') }}
         </v-btn>
-        <v-btn outlined class="rounded-xl my-1 mx-1" to="/group"> {{ $t('profile.looking-for-privacy-settings') }} </v-btn>
       </div>
     </section>
   </v-container>
@@ -135,6 +135,7 @@ export default defineComponent({
     UserAvatar,
     UserPasswordStrength,
   },
+  middleware: "auth",
   setup() {
     const { $auth } = useContext();
     const user = computed(() => $auth.user as unknown as UserOut);

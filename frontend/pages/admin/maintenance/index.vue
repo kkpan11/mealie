@@ -22,12 +22,8 @@
       <template #title> {{ $t("admin.maintenance.page-title") }} </template>
     </BasePageTitle>
 
-    <div class="d-flex justify-end">
-      <ButtonLink to="/admin/maintenance/logs" text="Logs" :icon="$globals.icons.file" />
-    </div>
-
     <section>
-      <BaseCardSectionTitle class="pb-0" :icon="$globals.icons.wrench" :title="$t('admin.maintenance.summary-title')">
+      <BaseCardSectionTitle class="pb-0" :icon="$globals.icons.wrench" :title="$tc('admin.maintenance.summary-title')">
       </BaseCardSectionTitle>
       <div class="mb-6 ml-2 d-flex" style="gap: 0.3rem">
         <BaseButton color="info" @click="getSummary">
@@ -55,13 +51,13 @@
       <BaseCardSectionTitle
         class="pb-0 mt-8"
         :icon="$globals.icons.wrench"
-        :title="$t('admin.mainentance.actions-title')"
+        :title="$tc('admin.mainentance.actions-title')"
       >
         <i18n path="admin.maintenance.actions-description">
-          <template #destructive-in-bold>
+          <template #destructive_in_bold>
             <b>{{ $t("admin.maintenance.actions-description-destructive") }}</b>
           </template>
-          <template #irreversible-in-bold>
+          <template #irreversible_in_bold>
             <b>{{ $t("admin.maintenance.actions-description-irreversible") }}</b>
           </template>
         </i18n>
@@ -103,13 +99,13 @@ export default defineComponent({
     });
 
     const adminApi = useAdminApi();
+    const { i18n } = useContext();
 
     // ==========================================================================
     // General Info
 
     const infoResults = ref<MaintenanceSummary>({
-      dataDirSize: "unknown",
-      logFileSize: "unknown",
+      dataDirSize: i18n.tc("about.unknown-version"),
       cleanableDirs: 0,
       cleanableImages: 0,
     });
@@ -119,8 +115,7 @@ export default defineComponent({
       const { data } = await adminApi.maintenance.getInfo();
 
       infoResults.value = data ?? {
-        dataDirSize: "unknown",
-        logFileSize: "unknown",
+        dataDirSize: i18n.tc("about.unknown-version"),
         cleanableDirs: 0,
         cleanableImages: 0,
       };
@@ -128,17 +123,11 @@ export default defineComponent({
       state.fetchingInfo = false;
     }
 
-    const { i18n } = useContext();
-
     const info = computed(() => {
       return [
         {
           name: i18n.t("admin.maintenance.info-description-data-dir-size"),
           value: infoResults.value.dataDirSize,
-        },
-        {
-          name: i18n.t("admin.maintenance.info-description-log-file-size"),
-          value: infoResults.value.logFileSize,
         },
         {
           name: i18n.t("admin.maintenance.info-description-cleanable-directories"),
@@ -163,7 +152,7 @@ export default defineComponent({
     };
 
     function storageDetailsText(key: string) {
-      return storageTitles[key] ?? "unknown";
+      return storageTitles[key] ?? i18n.tc("about.unknown-version");
     }
 
     const storageDetails = ref<MaintenanceStorageDetails | null>(null);
@@ -184,12 +173,6 @@ export default defineComponent({
     // ==========================================================================
     // Actions
 
-    async function handleDeleteLogFile() {
-      state.actionLoading = true;
-      await adminApi.maintenance.cleanLogFile();
-      state.actionLoading = false;
-    }
-
     async function handleCleanDirectories() {
       state.actionLoading = true;
       await adminApi.maintenance.cleanRecipeFolders();
@@ -209,11 +192,6 @@ export default defineComponent({
     }
 
     const actions = [
-      {
-        name: i18n.t("admin.maintenance.action-delete-log-files-name"),
-        handler: handleDeleteLogFile,
-        subtitle: i18n.t("admin.maintenance.action-delete-log-files-description"),
-      },
       {
         name: i18n.t("admin.maintenance.action-clean-directories-name"),
         handler: handleCleanDirectories,
@@ -243,7 +221,7 @@ export default defineComponent({
   },
   head() {
     return {
-      title: this.$t("settings.site-settings") as string,
+      title: this.$t("admin.maintenance.page-title") as string,
     };
   },
 });

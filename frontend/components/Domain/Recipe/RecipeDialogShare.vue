@@ -22,7 +22,13 @@
               v-on="on"
             ></v-text-field>
           </template>
-          <v-date-picker v-model="expirationDate" no-title @input="datePickerMenu = false"></v-date-picker>
+          <v-date-picker
+            v-model="expirationDate"
+            no-title
+            :first-day-of-week="firstDayOfWeek"
+            :local="$i18n.locale"
+            @input="datePickerMenu = false"
+          />
         </v-menu>
       </v-card-text>
       <v-card-actions class="justify-end">
@@ -56,10 +62,11 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, computed, toRefs, reactive, useContext } from "@nuxtjs/composition-api";
+import { defineComponent, computed, toRefs, reactive, useContext, useRoute } from "@nuxtjs/composition-api";
 import { useClipboard, useShare, whenever } from "@vueuse/core";
 import { RecipeShareToken } from "~/lib/api/types/recipe";
 import { useUserApi } from "~/composables/api";
+import { useHouseholdSelf } from "~/composables/use-households";
 import { alert } from "~/composables/use-toast";
 
 export default defineComponent({
@@ -105,6 +112,15 @@ export default defineComponent({
       }
     );
 
+    const { $auth, i18n } = useContext();
+    const { household } = useHouseholdSelf();
+    const route = useRoute();
+    const groupSlug = computed(() => route.value.params.groupSlug || $auth.user?.groupSlug || "");
+
+    const firstDayOfWeek = computed(() => {
+      return household.value?.preferences?.firstDayOfWeek || 0;
+    });
+
     // ============================================================
     // Token Actions
 
@@ -138,21 +154,30 @@ export default defineComponent({
       }
     }
 
-    const { i18n } = useContext();
     const { share, isSupported: shareIsSupported } = useShare();
-    const { copy } = useClipboard();
+    const { copy, copied, isSupported } = useClipboard();
 
     function getRecipeText() {
       return i18n.t("recipe.share-recipe-message", [props.name]);
     }
 
     function getTokenLink(token: string) {
-      return `${window.location.origin}/shared/recipes/${token}`;
+      return `${window.location.origin}/g/${groupSlug.value}/shared/r/${token}`;
     }
 
     async function copyTokenLink(token: string) {
-      await copy(getTokenLink(token));
-      alert.success(i18n.t("recipe-share.recipe-link-copied-message") as string);
+      if (isSupported.value) {
+        await copy(getTokenLink(token));
+        if (copied.value) {
+          alert.success(i18n.t("recipe-share.recipe-link-copied-message") as string);
+        }
+        else {
+          alert.error(i18n.t("general.clipboard-copy-failure") as string);
+        }
+      }
+      else {
+        alert.error(i18n.t("general.clipboard-not-supported") as string);
+      }
     }
 
     async function shareRecipe(token: string) {
@@ -172,6 +197,7 @@ export default defineComponent({
       dialog,
       createNewToken,
       deleteToken,
+      firstDayOfWeek,
       shareRecipe,
       copyTokenLink,
     };

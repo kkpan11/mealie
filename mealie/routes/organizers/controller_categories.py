@@ -1,14 +1,14 @@
 from functools import cached_property
 
 from fastapi import APIRouter, Depends
-from pydantic import UUID4, BaseModel
+from pydantic import UUID4, BaseModel, ConfigDict
 
 from mealie.routes._base import BaseCrudController, controller
 from mealie.routes._base.mixins import HttpRepo
 from mealie.schema import mapper
 from mealie.schema.recipe import CategoryIn, RecipeCategoryResponse
 from mealie.schema.recipe.recipe import RecipeCategory, RecipeCategoryPagination
-from mealie.schema.recipe.recipe_category import CategoryBase, CategorySave
+from mealie.schema.recipe.recipe_category import CategoryBase, CategoryOut, CategorySave
 from mealie.schema.response.pagination import PaginationQuery
 from mealie.services import urls
 from mealie.services.event_bus_service.event_types import EventCategoryData, EventOperation, EventTypes
@@ -20,9 +20,7 @@ class CategorySummary(BaseModel):
     id: UUID4
     slug: str
     name: str
-
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 @controller(router)
@@ -31,11 +29,11 @@ class RecipeCategoryController(BaseCrudController):
     # CRUD Operations
     @cached_property
     def repo(self):
-        return self.repos.categories.by_group(self.group_id)
+        return self.repos.categories
 
     @cached_property
     def mixins(self):
-        return HttpRepo(self.repo, self.logger)
+        return HttpRepo[CategorySave, CategoryOut, CategorySave](self.repo, self.logger)
 
     @router.get("", response_model=RecipeCategoryPagination)
     def get_all(self, q: PaginationQuery = Depends(PaginationQuery), search: str | None = None):
@@ -46,7 +44,7 @@ class RecipeCategoryController(BaseCrudController):
             search=search,
         )
 
-        response.set_pagination_guides(router.url_path_for("get_all"), q.dict())
+        response.set_pagination_guides(router.url_path_for("get_all"), q.model_dump())
         return response
 
     @router.post("", status_code=201)
@@ -58,6 +56,8 @@ class RecipeCategoryController(BaseCrudController):
             self.publish_event(
                 event_type=EventTypes.category_created,
                 document_data=EventCategoryData(operation=EventOperation.create, category_id=new_category.id),
+                group_id=new_category.group_id,
+                household_id=None,
                 message=self.t(
                     "notifications.generic-created-with-url",
                     name=new_category.name,
@@ -67,11 +67,16 @@ class RecipeCategoryController(BaseCrudController):
 
         return new_category
 
+    @router.get("/empty", response_model=list[CategoryBase])
+    def get_all_empty(self):
+        """Returns a list of categories that do not contain any recipes"""
+        return self.repos.categories.get_empty()
+
     @router.get("/{item_id}", response_model=CategorySummary)
     def get_one(self, item_id: UUID4):
         """Returns a list of recipes associated with the provided category."""
         category_obj = self.mixins.get_one(item_id)
-        category_obj = CategorySummary.from_orm(category_obj)
+        category_obj = CategorySummary.model_validate(category_obj)
         return category_obj
 
     @router.put("/{item_id}", response_model=CategorySummary)
@@ -84,6 +89,8 @@ class RecipeCategoryController(BaseCrudController):
             self.publish_event(
                 event_type=EventTypes.category_updated,
                 document_data=EventCategoryData(operation=EventOperation.update, category_id=category.id),
+                group_id=category.group_id,
+                household_id=None,
                 message=self.t(
                     "notifications.generic-updated-with-url",
                     name=category.name,
@@ -104,24 +111,21 @@ class RecipeCategoryController(BaseCrudController):
             self.publish_event(
                 event_type=EventTypes.category_deleted,
                 document_data=EventCategoryData(operation=EventOperation.delete, category_id=category.id),
+                group_id=category.group_id,
+                household_id=None,
                 message=self.t("notifications.generic-deleted", name=category.name),
             )
 
     # =========================================================================
     # Read All Operations
 
-    @router.get("/empty", response_model=list[CategoryBase])
-    def get_all_empty(self):
-        """Returns a list of categories that do not contain any recipes"""
-        return self.repos.categories.get_empty()
-
     @router.get("/slug/{category_slug}")
     def get_one_by_slug(self, category_slug: str):
         """Returns a category object with the associated recieps relating to the category"""
         category: RecipeCategory = self.mixins.get_one(category_slug, "slug")
-        return RecipeCategoryResponse.construct(
+        return RecipeCategoryResponse.model_construct(
             id=category.id,
             slug=category.slug,
             name=category.name,
-            recipes=self.repos.recipes.by_group(self.group_id).get_by_categories([category]),
+            recipes=self.repos.recipes.get_by_categories([category]),
         )

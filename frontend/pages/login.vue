@@ -7,6 +7,18 @@
       'bg-off-white': !$vuetify.theme.dark && !isDark,
     }"
   >
+    <v-alert v-if="isFirstLogin" class="my-4" type="info" icon="mdi-information">
+      <div>
+        <p class="mb-3">
+          {{ $tc('user.it-looks-like-this-is-your-first-time-logging-in')}}
+        </p>
+        <p class="mb-1"><strong>{{ $tc('user.username') }}:</strong> changeme@example.com</p>
+        <p class="mb-3"><strong>{{  $tc('user.password') }}:</strong> MyPassword</p>
+        <p>
+          {{  $tc('user.dont-want-to-see-this-anymore-be-sure-to-change-your-email') }}
+        </p>
+      </div>
+    </v-alert>
     <v-card tag="section" class="d-flex flex-column align-center" width="600px">
       <v-toolbar width="100%" color="primary" class="d-flex justify-center mb-4" dark>
         <v-toolbar-title class="headline text-h4"> Mealie </v-toolbar-title>
@@ -32,6 +44,7 @@
             filled
             rounded
             autofocus
+            autocomplete="username"
             class="rounded-lg"
             name="login"
             :label="$t('user.email-or-username')"
@@ -44,6 +57,7 @@
             :append-icon="passwordIcon"
             filled
             rounded
+            autocomplete="current-password"
             class="rounded-lg"
             name="password"
             :label="$t('user.password')"
@@ -53,20 +67,38 @@
           <v-checkbox v-model="form.remember" class="ml-2 mt-n2" :label="$t('user.remember-me')"></v-checkbox>
           <v-card-actions class="justify-center pt-0">
             <div class="max-button">
-              <v-btn :loading="loggingIn" color="primary" type="submit" large rounded class="rounded-xl" block>
+              <v-btn :loading="loggingIn" :disabled="oidcLoggingIn" color="primary" type="submit" large rounded class="rounded-xl" block>
                 {{ $t("user.login") }}
               </v-btn>
             </div>
           </v-card-actions>
+
+          <div v-if="allowOidc" class="d-flex my-4 justify-center align-center" width="80%">
+            <v-divider class="div-width"/>
+            <span
+                class="absolute px-2"
+                :class="{
+                    'bg-white': !$vuetify.theme.dark && !isDark,
+                    'bg-background': $vuetify.theme.dark || isDark,
+                }"
+            >
+                {{ $t("user.or") }}
+            </span>
+          </div>
+          <v-card-actions v-if="allowOidc" class="justify-center">
+          <div class="max-button">
+            <v-btn :loading="oidcLoggingIn" color="primary" large rounded class="rounded-xl" block @click.native="() => oidcAuthenticate()">
+                {{ $t("user.login-oidc") }} {{ oidcProviderName }}
+            </v-btn>
+          </div>
+        </v-card-actions>
         </v-form>
       </v-card-text>
-      <v-card-actions>
+      <v-card-actions class="d-flex justify-center flex-column flex-sm-row">
         <v-btn v-if="allowSignup" text to="/register"> {{ $t("user.register") }} </v-btn>
         <v-btn v-else text disabled> {{ $t("user.invite-only") }} </v-btn>
         <v-btn class="mr-auto" text to="/forgot-password"> {{ $t("user.reset-password") }} </v-btn>
       </v-card-actions>
-
-      <v-divider></v-divider>
 
       <v-card-text class="d-flex justify-center flex-column flex-sm-row">
         <div
@@ -99,40 +131,31 @@
         </div>
       </v-card-text>
     </v-card>
-
-    <v-btn bottom center class="mt-5" @click="toggleDark">
-      <v-icon left>
-        {{ $vuetify.theme.dark ? $globals.icons.weatherSunny : $globals.icons.weatherNight }}
-      </v-icon>
-      {{ $vuetify.theme.dark ? $t('settings.theme.light-mode') : $t('settings.theme.dark-mode') }}
-    </v-btn>
   </v-container>
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, useContext, computed, reactive, useRouter } from "@nuxtjs/composition-api";
+import { defineComponent, ref, useContext, computed, reactive, useRouter, useAsync, onBeforeMount } from "@nuxtjs/composition-api";
 import { useDark, whenever } from "@vueuse/core";
+import { useLoggedInState } from "~/composables/use-logged-in-state";
 import { useAppInfo } from "~/composables/api";
 import { usePasswordField } from "~/composables/use-passwords";
 import { alert } from "~/composables/use-toast";
-import { useToggleDarkMode } from "~/composables/use-utils";
+import { useAsyncKey } from "~/composables/use-utils";
+import { AppStartupInfo } from "~/lib/api/types/admin";
+
 export default defineComponent({
   layout: "blank",
 
   setup() {
-    const toggleDark = useToggleDarkMode();
     const isDark = useDark();
 
     const router = useRouter();
-    const { $auth, i18n } = useContext();
-
-    whenever(
-      () => $auth.loggedIn,
-      () => {
-        router.push("/");
-      },
-      { immediate: true },
-    );
+    const { $auth, i18n, $axios } = useContext();
+    const { loggedIn } = useLoggedInState();
+    const groupSlug = computed(() => $auth.user?.groupSlug);
+    const isDemo = ref(false);
+    const isFirstLogin = ref(false);
 
     const form = reactive({
       email: "",
@@ -140,13 +163,72 @@ export default defineComponent({
       remember: false,
     });
 
+    useAsync(async () => {
+      const data = await $axios.get<AppStartupInfo>("/api/app/about/startup-info");
+      isDemo.value = data.data.isDemo;
+      isFirstLogin.value = data.data.isFirstLogin;
+    }, useAsyncKey());
+
+    whenever(
+      () => loggedIn.value && groupSlug.value,
+      () => {
+        if (!isDemo.value && isFirstLogin.value && $auth.user?.admin) {
+          router.push("/admin/setup");
+        } else {
+          router.push(`/g/${groupSlug.value || ""}`);
+        }
+      },
+      { immediate: true },
+    );
+
     const loggingIn = ref(false);
+    const oidcLoggingIn = ref(false)
 
     const appInfo = useAppInfo();
 
     const { passwordIcon, inputType, togglePasswordShow } = usePasswordField();
 
     const allowSignup = computed(() => appInfo.value?.allowSignup || false);
+    const allowOidc = computed(() => appInfo.value?.enableOidc || false);
+    const oidcRedirect = computed(() => appInfo.value?.oidcRedirect || false);
+    const oidcProviderName = computed(() => appInfo.value?.oidcProviderName || "OAuth")
+
+    whenever(
+        () => allowOidc.value && oidcRedirect.value && !isCallback() && !isDirectLogin() && !$auth.check().valid,
+        () => oidcAuthenticate(),
+        {immediate: true}
+    )
+
+    onBeforeMount(async () => {
+        if (isCallback()) {
+            await oidcAuthenticate(true)
+        }
+    })
+
+    function isCallback() {
+        const params = new URLSearchParams(window.location.search)
+        return params.has("code") || params.has("error")
+    }
+
+    function isDirectLogin() {
+        const params = new URLSearchParams(window.location.search)
+        return params.has("direct") && params.get("direct") === "1"
+    }
+
+    async function oidcAuthenticate(callback = false) {
+        if (callback) {
+            oidcLoggingIn.value = true
+            try {
+                await $auth.loginWith("oidc", { params: new URLSearchParams(window.location.search)})
+            } catch (error) {
+                await router.replace("/login?direct=1")
+                alertOnError(error)
+            }
+            oidcLoggingIn.value = false
+        } else {
+            window.location.replace("/api/auth/oauth") // start the redirect process
+        }
+    }
 
     async function authenticate() {
       if (form.email.length === 0 || form.password.length === 0) {
@@ -163,6 +245,12 @@ export default defineComponent({
       try {
         await $auth.loginWith("local", { data: formData });
       } catch (error) {
+        alertOnError(error)
+      }
+      loggingIn.value = false;
+    }
+
+    function alertOnError(error: any) {
         // TODO Check if error is an AxiosError, but isAxiosError is not working right now
         // See https://github.com/nuxt-community/axios-module/issues/550
         // Import $axios from useContext()
@@ -176,8 +264,6 @@ export default defineComponent({
         } else {
           alert.error(i18n.t("events.something-went-wrong") as string);
         }
-      }
-      loggingIn.value = false;
     }
 
     return {
@@ -185,11 +271,15 @@ export default defineComponent({
       form,
       loggingIn,
       allowSignup,
+      allowOidc,
       authenticate,
-      toggleDark,
+      oidcAuthenticate,
+      oidcProviderName,
+      oidcLoggingIn,
       passwordIcon,
       inputType,
       togglePasswordShow,
+      isFirstLogin
     };
   },
 
@@ -235,5 +325,21 @@ export default defineComponent({
 
 .bg-off-white {
   background: #f5f8fa;
+}
+
+.absolute {
+    position: absolute;
+}
+
+.div-width {
+    max-width: 75%;
+}
+
+.bg-background {
+    background-color: #1e1e1e;
+}
+
+.bg-white {
+    background-color: #fff;
 }
 </style>

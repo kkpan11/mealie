@@ -3,7 +3,20 @@
         "server-error": "Došlo k nečekané chybě"
     },
     "recipe": {
-        "unique-name-error": "Názvy receptů musí být jedinečné"
+        "unique-name-error": "Názvy receptů musí být jedinečné",
+        "recipe-created": "Recipe Created",
+        "recipe-defaults": {
+            "ingredient-note": "1 hrnek mouky",
+            "step-text": "Kroky receptu stejně jako další pole v receptu podporují markdown syntaxi.\n\n**Přidat odkaz**\n\n[Můj odkaz](https://demo.mealie.io)\n"
+        },
+        "servings-text": {
+            "makes": "Makes",
+            "serves": "Porce",
+            "serving": "Serving",
+            "servings": "Servings",
+            "yield": "Yield",
+            "yields": "Yields"
+        }
     },
     "mealplan": {
         "no-recipes-match-your-rules": "Žádné recepty neodpovídají vašim pravidlům"
@@ -31,5 +44,37 @@
         "generic-updated-with-url": "{name} byl aktualizován, {url}",
         "generic-duplicated": "{name} byl duplikován",
         "generic-deleted": "{name} byl odstraněn"
+    },
+    "datetime": {
+        "year": "rok|roky",
+        "day": "den|dny",
+        "hour": "hodina|hodiny|hodin",
+        "minute": "minuta|minuty|minut",
+        "second": "sekunda|sekundy|sekund",
+        "millisecond": "millisekunda|millisekundy|millisekund",
+        "microsecond": "mikrosekunda|mikrosekundy|mikrosekund"
+    },
+    "emails": {
+        "password": {
+            "subject": "Mealie Zapomenuté heslo",
+            "header_text": "Zapomenuté heslo",
+            "message_top": "Požádali jste o obnovení hesla.",
+            "message_bottom": "Pro obnovení hesla klikněte na tlačítko výše.",
+            "button_text": "Obnovit heslo"
+        },
+        "invitation": {
+            "subject": "Pozvánka k připojení k Mealie",
+            "header_text": "Jste pozváni!",
+            "message_top": "Byli jste pozváni, abyste se připojili k Mealie.",
+            "message_bottom": "Pro přijetí pozvánky klikněte na tlačítko výše.",
+            "button_text": "Přijmout pozvánku"
+        },
+        "test": {
+            "subject": "Zkušební e-mail z Mealie",
+            "header_text": "Zkušební e-mail",
+            "message_top": "Toto je zkušební email.",
+            "message_bottom": "Pro otestování e-mailu klikněte na tlačítko výše.",
+            "button_text": "Otevřít Mealie"
+        }
     }
 }

@@ -5,17 +5,21 @@
     <BaseDialog
       v-if="deleteTarget"
       v-model="dialogs.delete"
-      :title="$t('general.delete-with-name', { name: deleteTarget.name })"
+      :title="$t('general.delete-with-name', { name: $t(translationKey) })"
       color="error"
       :icon="$globals.icons.alertCircle"
       @confirm="deleteOne()"
     >
-      <v-card-text> {{ $t("general.confirm-delete-generic-with-name", { name: deleteTarget.name }) }} </v-card-text>
+      <v-card-text>
+<p>{{ $t("general.confirm-delete-generic-with-name", { name: $t(translationKey) }) }}</p>
+        <p class="mt-4 mb-0 ml-4">{{ deleteTarget.name }}</p>
+      </v-card-text>
     </BaseDialog>
 
     <BaseDialog v-if="updateTarget" v-model="dialogs.update" :title="$t('general.update')" @confirm="updateOne()">
       <v-card-text>
-        <v-text-field v-model="updateTarget.name" label="Name"> </v-text-field>
+        <v-text-field v-model="updateTarget.name" :label="$t('general.name')"> </v-text-field>
+        <v-checkbox v-if="itemType === Organizer.Tool" v-model="updateTarget.onHand" :label="$t('tool.on-hand')"></v-checkbox>
       </v-card-text>
     </BaseDialog>
 
@@ -48,7 +52,7 @@
       <BaseCardSectionTitle v-if="isTitle(key)" :title="key" />
       <v-row>
         <v-col v-for="(item, index) in itms" :key="'cat' + index" cols="12" :sm="12" :md="6" :lg="4" :xl="3">
-          <v-card v-if="item" class="left-border" hover :to="`/?${itemType}=${item.id}`">
+          <v-card v-if="item" class="left-border" hover :to="`/g/${groupSlug}?${itemType}=${item.id}`">
             <v-card-actions>
               <v-icon>
                 {{ icon }}
@@ -72,10 +76,10 @@
 
 <script lang="ts">
 import Fuse from "fuse.js";
-import { defineComponent, computed, ref, reactive } from "@nuxtjs/composition-api";
+import { defineComponent, computed, ref, reactive, useContext, useRoute } from "@nuxtjs/composition-api";
 import { useContextPresets } from "~/composables/use-context-presents";
 import RecipeOrganizerDialog from "~/components/Domain/Recipe/RecipeOrganizerDialog.vue";
-import { RecipeOrganizer } from "~/lib/api/types/non-generated";
+import { Organizer, RecipeOrganizer } from "~/lib/api/types/non-generated";
 import { useRouteQuery } from "~/composables/use-router";
 import { deepCopy } from "~/composables/use-utils";
 
@@ -83,6 +87,7 @@ interface GenericItem {
   id: string;
   name: string;
   slug: string;
+  onHand: boolean;
 }
 
 export default defineComponent({
@@ -109,15 +114,19 @@ export default defineComponent({
       options: {
         ignoreLocation: true,
         shouldSort: true,
-        threshold: 0.6,
+        threshold: 0.2,
         location: 0,
-        distance: 100,
+        distance: 20,
         findAllMatches: true,
         maxPatternLength: 32,
         minMatchCharLength: 1,
         keys: ["name"],
       },
     });
+
+    const { $auth } = useContext();
+    const route = useRoute();
+    const groupSlug = computed(() => route.value.params.groupSlug || $auth.user?.groupSlug || "");
 
     // =================================================================
     // Context Menu
@@ -129,6 +138,17 @@ export default defineComponent({
     });
 
     const presets = useContextPresets();
+
+    const translationKey = computed<string>(() => {
+      const typeMap = {
+        "categories": "category.category",
+        "tags": "tag.tag",
+        "tools": "tool.tool",
+        "foods": "shopping-list.food",
+        "households": "household.household",
+      };
+      return typeMap[props.itemType] || "";
+    });
 
     const deleteTarget = ref<GenericItem | null>(null);
     const updateTarget = ref<GenericItem | null>(null);
@@ -204,6 +224,7 @@ export default defineComponent({
     }
 
     return {
+      groupSlug,
       isTitle,
       dialogs,
       confirmDelete,
@@ -212,9 +233,11 @@ export default defineComponent({
       updateTarget,
       deleteOne,
       deleteTarget,
+      Organizer,
       presets,
       itemsSorted,
       searchString,
+      translationKey,
     };
   },
   // Needed for useMeta

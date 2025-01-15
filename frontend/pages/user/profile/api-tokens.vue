@@ -4,7 +4,7 @@
       <template #header>
         <v-img max-height="200px" max-width="200px" :src="require('~/static/svgs/manage-api-tokens.svg')"></v-img>
       </template>
-      <template #title> API Tokens </template>
+      <template #title> {{ $tc("settings.token.api-tokens") }} </template>
       {{ $tc('settings.token.you-have-token-count', user.tokens.length) }}
     </BasePageTitle>
     <section class="d-flex justify-center">
@@ -42,16 +42,16 @@
         </v-card-actions>
       </v-card>
     </section>
-    <BaseCardSectionTitle class="mt-10" title="Active Tokens"> </BaseCardSectionTitle>
-    <section class="d-flex flex-column align-center justify-center">
-      <div v-for="(token, index) in $auth.user.tokens" :key="index" class="d-flex my-2">
-        <v-card outlined width="500px">
+    <BaseCardSectionTitle class="mt-10" :title="$tc('settings.token.active-tokens')"> </BaseCardSectionTitle>
+    <section class="d-flex flex-column">
+      <div v-for="(token, index) in $auth.user.tokens" :key="index">
+        <v-card outlined class="mb-2">
           <v-list-item>
             <v-list-item-content>
               <v-list-item-title>
                 {{ token.name }}
               </v-list-item-title>
-              <v-list-item-subtitle> {{ $t('general.created-on-date', [$d(new Date(token.createdAt+"Z"))]) }} </v-list-item-subtitle>
+              <v-list-item-subtitle> {{ $t('general.created-on-date', [$d(new Date(token.createdAt))]) }} </v-list-item-subtitle>
             </v-list-item-content>
             <v-list-item-action>
               <BaseButton delete small @click="deleteToken(token.id)"></BaseButton>
@@ -69,6 +69,7 @@ import { useUserApi } from "~/composables/api";
 import { VForm } from "~/types/vuetify";
 
 export default defineComponent({
+  middleware: ["auth", "advanced-only"],
   setup() {
     const nuxtContext = useContext();
 

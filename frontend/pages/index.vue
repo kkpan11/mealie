@@ -1,40 +1,42 @@
 <template>
-  <div v-if="groupSlug">
-    <RecipeExplorerPage :group-slug="groupSlug" />
-  </div>
+  <div></div>
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, useContext } from "@nuxtjs/composition-api";
-import { invoke } from "@vueuse/core";
-import { useUserApi } from "~/composables/api/api-client";
-import RecipeExplorerPage from "~/components/Domain/Recipe/RecipeExplorerPage.vue";
+import { computed, defineComponent, useAsync, useContext, useRouter } from "@nuxtjs/composition-api";
+import { useAsyncKey } from "~/composables/use-utils";
+import { AppInfo, AppStartupInfo } from "~/lib/api/types/admin";
 
 export default defineComponent({
-  components: { RecipeExplorerPage },
+  layout: "blank",
   setup() {
-    const { $auth } = useContext();
-    const api = useUserApi();
+    const { $auth, $axios } = useContext();
+    const router = useRouter();
+    const groupSlug = computed(() => $auth.user?.groupSlug);
 
-    // @ts-ignore $auth.user is typed as unknown, even though it's a user
-    const groupId: string | undefined = $auth.user?.groupId;
-    const groupSlug = ref<string>();
-
-
-    invoke(async () => {
-      if (!groupId) {
-        return;
+    async function redirectPublicUserToDefaultGroup() {
+      const { data } = await $axios.get<AppInfo>("/api/app/about");
+      if (data?.defaultGroupSlug) {
+        router.push(`/g/${data.defaultGroupSlug}`);
+      } else {
+        router.push("/login");
       }
+    }
 
-      const { data } = await api.groups.getOne(groupId);
-      if (data) {
-        groupSlug.value = data.slug;
+    useAsync(async () => {
+      if (groupSlug.value) {
+        const data = await $axios.get<AppStartupInfo>("/api/app/about/startup-info");
+        const isDemo = data.data.isDemo;
+        const isFirstLogin = data.data.isFirstLogin;
+        if (!isDemo && isFirstLogin && $auth.user?.admin) {
+          router.push("/admin/setup");
+        } else {
+          router.push(`/g/${groupSlug.value}`);
+        }
+      } else {
+        redirectPublicUserToDefaultGroup();
       }
-    });
-
-    return {
-      groupSlug,
-    };
-  },
+    }, useAsyncKey());
+  }
 });
 </script>

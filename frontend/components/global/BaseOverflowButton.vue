@@ -11,36 +11,51 @@
         </v-icon>
       </v-btn>
     </template>
-    <!--  Model -->
+    <!-- Model -->
     <v-list v-if="mode === MODES.model" dense>
       <v-list-item-group v-model="itemGroup">
-        <v-list-item v-for="(item, index) in items" :key="index" @click="setValue(item)">
-          <v-list-item-icon v-if="item.icon">
-            <v-icon>{{ item.icon }}</v-icon>
-          </v-list-item-icon>
-          <v-list-item-title>{{ item.text }}</v-list-item-title>
-        </v-list-item>
+        <template v-for="(item, index) in items">
+          <div v-if="!item.hide" :key="index">
+            <v-list-item @click="setValue(item)">
+              <v-list-item-icon v-if="item.icon">
+                <v-icon>{{ item.icon }}</v-icon>
+              </v-list-item-icon>
+              <v-list-item-title>{{ item.text }}</v-list-item-title>
+            </v-list-item>
+            <v-divider v-if="item.divider" :key="`divider-${index}`" class="my-1" ></v-divider>
+          </div>
+        </template>
       </v-list-item-group>
     </v-list>
-    <!--  Links -->
+    <!-- Links -->
     <v-list v-else-if="mode === MODES.link" dense>
       <v-list-item-group v-model="itemGroup">
-        <v-list-item v-for="(item, index) in items" :key="index" :to="item.to">
-          <v-list-item-icon v-if="item.icon">
-            <v-icon>{{ item.icon }}</v-icon>
-          </v-list-item-icon>
-          <v-list-item-title>{{ item.text }}</v-list-item-title>
-        </v-list-item>
+        <template v-for="(item, index) in items">
+          <div v-if="!item.hide" :key="index">
+            <v-list-item :to="item.to">
+            <v-list-item-icon v-if="item.icon">
+              <v-icon>{{ item.icon }}</v-icon>
+            </v-list-item-icon>
+            <v-list-item-title>{{ item.text }}</v-list-item-title>
+            </v-list-item>
+            <v-divider v-if="item.divider" :key="`divider-${index}`" class="my-1" ></v-divider>
+          </div>
+        </template>
       </v-list-item-group>
     </v-list>
-    <!--  Event -->
+    <!-- Event -->
     <v-list v-else-if="mode === MODES.event" dense>
-      <v-list-item v-for="(item, index) in items" :key="index" @click="$emit(item.event)">
-        <v-list-item-icon v-if="item.icon">
-          <v-icon>{{ item.icon }}</v-icon>
-        </v-list-item-icon>
-        <v-list-item-title>{{ item.text }}</v-list-item-title>
-      </v-list-item>
+      <template v-for="(item, index) in items">
+        <div v-if="!item.hide" :key="index">
+          <v-list-item @click="$emit(item.event)">
+            <v-list-item-icon v-if="item.icon">
+              <v-icon>{{ item.icon }}</v-icon>
+            </v-list-item-icon>
+            <v-list-item-title>{{ item.text }}</v-list-item-title>
+          </v-list-item>
+          <v-divider v-if="item.divider" :key="`divider-${index}`" class="my-1" ></v-divider>
+        </div>
+      </template>
     </v-list>
   </v-menu>
 </template>
@@ -64,6 +79,8 @@ export interface MenuItem {
   to?: string;
   value?: string;
   event?: string;
+  divider?: boolean;
+  hide?: boolean;
 }
 
 export default defineComponent({

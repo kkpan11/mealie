@@ -1,7 +1,7 @@
 <template>
   <div v-if="value.length > 0 || edit" class="mt-8">
     <h2 class="my-4">{{ $t("recipe.note") }}</h2>
-    <div v-for="(note, index) in value" :key="'note' + index" class="mt-1">
+    <div v-for="(note, index) in value" :id="'note' + index" :key="'note' + index" class="mt-1">
       <v-card v-if="edit">
         <v-card-text>
           <div class="d-flex align-center">
@@ -24,7 +24,7 @@
     </div>
 
     <div v-if="edit" class="d-flex justify-end">
-      <BaseButton class="ml-auto my-2" @click="addNote"> {{ $t("general.new") }}</BaseButton>
+      <BaseButton class="ml-auto my-2" @click="addNote"> {{ $t("general.add") }}</BaseButton>
     </div>
   </div>
 </template>

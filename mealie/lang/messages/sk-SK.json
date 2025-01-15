@@ -3,7 +3,20 @@
         "server-error": "Vyskytla sa neočakávaná chyba"
     },
     "recipe": {
-        "unique-name-error": "Názov receptu musí byť unikátny"
+        "unique-name-error": "Názov receptu musí byť unikátny",
+        "recipe-created": "Recipe Created",
+        "recipe-defaults": {
+            "ingredient-note": "1 šálka múky",
+            "step-text": "Kroky receptu, ako aj ďalšie polia na stránke receptu podporujú markdown syntax.\n\n**Pridanie odkazu**\n\n[Môj odkaz](https://demo.mealie.io)\n"
+        },
+        "servings-text": {
+            "makes": "Makes",
+            "serves": "Serves",
+            "serving": "Serving",
+            "servings": "Servings",
+            "yield": "Yield",
+            "yields": "Yields"
+        }
     },
     "mealplan": {
         "no-recipes-match-your-rules": "Vaše pravidlá nespĺňa žiadny recept"
@@ -31,5 +44,37 @@
         "generic-updated-with-url": "{name} bol aktualizovaný, {url}",
         "generic-duplicated": "{name} bol duplikovaný",
         "generic-deleted": "{name} bol vymazaný"
+    },
+    "datetime": {
+        "year": "rok|roky",
+        "day": "deň|dni",
+        "hour": "hodina|hodiny",
+        "minute": "minúta|minúty",
+        "second": "sekunda|sekúnd",
+        "millisecond": "milisekunda|milisekúnd",
+        "microsecond": "mikrosekunda|mikrosekúnd"
+    },
+    "emails": {
+        "password": {
+            "subject": "Mealie zabudnuté heslo",
+            "header_text": "Zabudnuté heslo",
+            "message_top": "Požiadali ste o obnovenie hesla.",
+            "message_bottom": "Prosím stlačte tlačidlo vyššie, na obnovenie vášho hesla.",
+            "button_text": "Obnovenie hesla"
+        },
+        "invitation": {
+            "subject": "Pozvanie na pripojenie k Mealie",
+            "header_text": "Boli ste pozvaní!",
+            "message_top": "Boli ste pozvaní na pripojenie k Mealie.",
+            "message_bottom": "Prosím, kliknite na tlačidlo vyššie pre akceptáciu pozvánky.",
+            "button_text": "Prijat pozvanie"
+        },
+        "test": {
+            "subject": "Testovací email Mealie",
+            "header_text": "Testovací email",
+            "message_top": "Toto je testovací email.",
+            "message_bottom": "Prosím, kliknite na tlačidlo vyššie, aby ste otestovali email.",
+            "button_text": "Otvoriť Mealie"
+        }
     }
 }

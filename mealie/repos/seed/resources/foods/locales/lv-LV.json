@@ -1,222 +1,692 @@
 {
-    "acorn-squash": "acorn squash",
-    "alfalfa-sprouts": "alfalfa sprouts",
-    "anchovies": "anchovies",
-    "apples": "apples",
-    "artichoke": "artichoke",
-    "arugula": "arugula",
-    "asparagus": "asparagus",
-    "aubergine": "aubergine",
-    "avocado": "avocado",
-    "bacon": "bacon",
-    "baking-powder": "baking powder",
-    "baking-soda": "baking soda",
-    "baking-sugar": "baking sugar",
-    "bar-sugar": "bar sugar",
-    "basil": "basil",
-    "bell-peppers": "bell peppers",
-    "blackberries": "blackberries",
-    "brassicas": "brassicas",
-    "bok-choy": "bok choy",
-    "broccoflower": "broccoflower",
-    "broccoli": "broccoli",
-    "broccolini": "broccolini",
-    "broccoli-rabe": "broccoli rabe",
-    "brussels-sprouts": "brussels sprouts",
-    "cabbage": "cabbage",
-    "cauliflower": "cauliflower",
-    "chinese-leaves": "chinese leaves",
-    "collard-greens": "collard greens",
-    "kohlrabi": "kohlrabi",
-    "bread": "bread",
-    "breadfruit": "breadfruit",
-    "broad-beans": "broad beans",
-    "brown-sugar": "brown sugar",
-    "butter": "butter",
-    "butternut-pumpkin": "butternut pumpkin",
-    "butternut-squash": "butternut squash",
-    "cactus-edible": "cactus, edible",
-    "calabrese": "calabrese",
-    "cannabis": "cannabis",
-    "capsicum": "capsicum",
-    "caraway": "caraway",
-    "carrot": "carrot",
-    "castor-sugar": "castor sugar",
-    "cayenne-pepper": "cayenne pepper",
-    "celeriac": "celeriac",
-    "celery": "celery",
-    "cereal-grains": "cereal grains",
-    "rice": "rice",
-    "chard": "chard",
-    "cheese": "cheese",
-    "chicory": "chicory",
-    "chilli-peppers": "chilli peppers",
-    "chives": "chives",
-    "chocolate": "chocolate",
-    "cilantro": "cilantro",
-    "cinnamon": "cinnamon",
-    "clarified-butter": "clarified butter",
-    "coconut": "coconut",
-    "coconut-milk": "coconut milk",
-    "coffee": "coffee",
-    "confectioners-sugar": "confectioners' sugar",
-    "coriander": "coriander",
-    "corn": "corn",
-    "corn-syrup": "corn syrup",
-    "cottonseed-oil": "cottonseed oil",
-    "courgette": "courgette",
-    "cream-of-tartar": "cream of tartar",
-    "cucumber": "cucumber",
-    "cumin": "cumin",
-    "daikon": "daikon",
-    "dairy-products-and-dairy-substitutes": "dairy products and dairy substitutes",
-    "eggs": "eggs",
-    "ghee": "ghee",
-    "milk": "milk",
-    "dandelion": "dandelion",
-    "demerara-sugar": "demerara sugar",
-    "dough": "dough",
-    "edible-cactus": "edible cactus",
-    "eggplant": "eggplant",
-    "endive": "endive",
-    "fats": "fats",
-    "speck": "speck",
-    "fava-beans": "fava beans",
-    "fiddlehead": "fiddlehead",
-    "fish": "fish",
-    "catfish": "catfish ",
-    "cod": "cod",
-    "salt-cod": "salt cod",
-    "salmon": "salmon",
-    "skate": "skate",
-    "stockfish": "stockfish",
-    "trout": "trout",
-    "tuna": "tuna",
-    "five-spice-powder": "five spice powder",
-    "flour": "flour",
-    "frisee": "frisee",
-    "fructose": "fructose",
-    "fruit": "fruit",
-    "apple": "apple",
-    "oranges": "oranges",
-    "pear": "pear",
-    "tomato": "tomato ",
-    "fruit-sugar": "fruit sugar",
-    "garam-masala": "garam masala",
-    "garlic": "garlic",
-    "gem-squash": "gem squash",
-    "ginger": "ginger",
-    "giblets": "giblets",
-    "grains": "grains",
-    "maize": "maize",
-    "sweetcorn": "sweetcorn",
-    "teff": "teff",
-    "grape-seed-oil": "grape seed oil",
-    "green-onion": "green onion",
-    "heart-of-palm": "heart of palm",
-    "hemp": "hemp",
-    "herbs": "herbs",
-    "oregano": "oregano",
-    "parsley": "parsley",
-    "honey": "honey",
-    "icing-sugar": "icing sugar",
-    "isomalt": "isomalt",
-    "jackfruit": "jackfruit",
-    "jaggery": "jaggery",
-    "jams": "jams",
-    "jellies": "jellies",
-    "jerusalem-artichoke": "jerusalem artichoke",
-    "jicama": "jicama",
-    "kale": "kale",
-    "kumara": "kumara",
-    "leavening-agents": "leavening agents",
-    "leek": "leek",
-    "legumes": "legumes ",
-    "peas": "peas",
-    "beans": "beans",
-    "lentils": "lentils",
-    "lemongrass": "lemongrass",
-    "lettuce": "lettuce",
-    "liver": "liver",
-    "maple-syrup": "maple syrup",
-    "meat": "meat",
-    "mortadella": "mortadella",
-    "mushroom": "mushroom",
-    "white-mushroom": "white mushroom",
-    "mussels": "mussels",
-    "nori": "nori",
-    "nutmeg": "nutmeg",
-    "nutritional-yeast-flakes": "nutritional yeast flakes",
-    "nuts": "nuts",
-    "nanaimo-bar-mix": "nanaimo bar mix",
-    "octopuses": "octopuses",
-    "oils": "oils",
-    "olive-oil": "olive oil",
-    "okra": "okra",
-    "olive": "olive",
-    "onion-family": "onion family",
-    "onion": "onion",
-    "scallion": "scallion",
-    "shallot": "shallot",
-    "spring-onion": "spring onion",
-    "orange-blossom-water": "orange blossom water",
-    "oysters": "oysters",
-    "panch-puran": "panch puran",
-    "paprika": "paprika",
-    "parsnip": "parsnip",
-    "pepper": "pepper",
-    "peppers": "peppers",
-    "plantain": "plantain",
-    "pineapple": "pineapple",
-    "poppy-seeds": "poppy seeds",
-    "potatoes": "potatoes",
-    "poultry": "poultry",
-    "powdered-sugar": "powdered sugar",
-    "pumpkin": "pumpkin",
-    "pumpkin-seeds": "pumpkin seeds",
-    "radish": "radish",
-    "raw-sugar": "raw sugar",
-    "refined-sugar": "refined sugar",
-    "rice-flour": "rice flour",
-    "rock-sugar": "rock sugar",
-    "rum": "rum",
-    "salt": "salt",
-    "seafood": "seafood",
-    "seeds": "seeds",
-    "sesame-seeds": "sesame seeds",
-    "sunflower-seeds": "sunflower seeds",
-    "soda": "soda",
-    "soda-baking": "soda, baking",
-    "soybean": "soybean",
-    "spaghetti-squash": "spaghetti squash",
-    "spices": "spices",
-    "spinach": "spinach",
-    "squash-family": "squash family",
-    "squash": "squash",
-    "zucchini": "zucchini",
-    "sugar": "sugar",
-    "caster-sugar": "caster sugar",
-    "granulated-sugar": "granulated sugar",
-    "superfine-sugar": "superfine sugar",
-    "turbanado-sugar": "turbanado sugar",
-    "unrefined-sugar": "unrefined sugar",
-    "white-sugar": "white sugar",
-    "sweet-potato": "sweet potato",
-    "sweeteners": "sweeteners",
-    "cane-sugar": "cane sugar",
-    "tahini": "tahini",
-    "tubers": "tubers",
-    "potato": "potato",
-    "sunchoke": "sunchoke",
-    "taro": "taro",
-    "yam": "yam",
-    "turnip": "turnip",
-    "vanilla": "vanilla",
-    "vegetables": "vegetables",
-    "fiddlehead-fern": "fiddlehead fern",
-    "ful": "ful",
-    "watercress": "watercress",
-    "watermelon": "watermelon",
-    "xanthan-gum": "xanthan gum",
-    "yeast": "yeast"
+	"acorn-squash": {
+		"name": "ozolzīles skvošs"
+	},
+	"alfalfa-sprouts": {
+		"name": "lucernas kāposti"
+	},
+	"anchovies": {
+		"name": "anšovs"
+	},
+	"apples": {
+		"name": "ābols",
+		"plural_name": "āboli"
+	},
+	"artichoke": {
+		"name": "artišoks"
+	},
+	"arugula": {
+		"name": "rukola"
+	},
+	"asparagus": {
+		"name": "sparģeļi"
+	},
+	"avocado": {
+		"name": "avokādo",
+		"plural_name": "avokādo"
+	},
+	"bacon": {
+		"name": "bekons"
+	},
+	"baking-powder": {
+		"name": "cepamais pulveris"
+	},
+	"baking-soda": {
+		"name": "cepamā soda"
+	},
+	"baking-sugar": {
+		"name": "cepamais pulveris"
+	},
+	"bar-sugar": {
+		"name": "batoniņu cukurs"
+	},
+	"basil": {
+		"name": "baziliks"
+	},
+	"beans": {
+		"name": "pupiņas"
+	},
+	"bell-peppers": {
+		"name": "bulgāru pipari",
+		"plural_name": "paprika"
+	},
+	"blackberries": {
+		"name": "kazenes"
+	},
+	"bok-choy": {
+		"name": "pak čoi"
+	},
+	"brassicas": {
+		"name": "brasiccas"
+	},
+	"bread": {
+		"name": "maize"
+	},
+	"breadfruit": {
+		"name": "augļu maize"
+	},
+	"broccoflower": {
+		"name": "brokopuķe"
+	},
+	"broccoli": {
+		"name": "brokoļi"
+	},
+	"broccoli-rabe": {
+		"name": "brokoļu rabe"
+	},
+	"broccolini": {
+		"name": "brokoļi"
+	},
+	"brown-sugar": {
+		"name": "brūnais cukurs"
+	},
+	"brussels-sprouts": {
+		"name": "briseles kāposti"
+	},
+	"butter": {
+		"name": "sviests"
+	},
+	"butternut-pumpkin": {
+		"name": "sviestriekstu ķirbis"
+	},
+	"butternut-squash": {
+		"name": "butternut skvošs"
+	},
+	"cabbage": {
+		"name": "kāposti",
+		"plural_name": "kāposti"
+	},
+	"cactus-edible": {
+		"name": "kaktuss, ēdams"
+	},
+	"calabrese": {
+		"name": "kalabrēze"
+	},
+	"cane-sugar": {
+		"name": "niedru cukurs"
+	},
+	"cannabis": {
+		"name": "kaņepes"
+	},
+	"capsicum": {
+		"name": "paprika"
+	},
+	"caraway": {
+		"name": "ķimenes"
+	},
+	"carrot": {
+		"name": "burkāns",
+		"plural_name": "burkāni"
+	},
+	"caster-sugar": {
+		"name": "pūdercukurs"
+	},
+	"castor-sugar": {
+		"name": "rīcincukurs"
+	},
+	"catfish": {
+		"name": "sams"
+	},
+	"cauliflower": {
+		"name": "ziedkāposti",
+		"plural_name": "ziedkāposti"
+	},
+	"cayenne-pepper": {
+		"name": "kajēnas pipari"
+	},
+	"celeriac": {
+		"name": "selerijas sakne"
+	},
+	"celery": {
+		"name": "selerijas"
+	},
+	"cereal-grains": {
+		"name": "labības graudi"
+	},
+	"chard": {
+		"name": "mangolds"
+	},
+	"cheese": {
+		"name": "siers"
+	},
+	"chicory": {
+		"name": "cigoriņi"
+	},
+	"chilli-peppers": {
+		"name": "čili pipari",
+		"plural_name": "čili pipari"
+	},
+	"chinese-leaves": {
+		"name": "ķīniešu lapas"
+	},
+	"chives": {
+		"name": "maurloki"
+	},
+	"chocolate": {
+		"name": "šokolāde"
+	},
+	"cilantro": {
+		"name": "koriandrs"
+	},
+	"cinnamon": {
+		"name": "kanēlis"
+	},
+	"clarified-butter": {
+		"name": "dzidrināts sviests"
+	},
+	"coconut": {
+		"name": "kokosrieksts",
+		"plural_name": "kokosrieksti"
+	},
+	"coconut-milk": {
+		"name": "kokosriekstu piens"
+	},
+	"cod": {
+		"name": "menca"
+	},
+	"coffee": {
+		"name": "kafija"
+	},
+	"collard-greens": {
+		"name": "zaļie kolrābji"
+	},
+	"confectioners-sugar": {
+		"name": "konditorejas cukurs"
+	},
+	"coriander": {
+		"name": "koriandrs"
+	},
+	"corn": {
+		"name": "kukurūza",
+		"plural_name": "kukurūzas"
+	},
+	"corn-syrup": {
+		"name": "kukurūzas sīrups"
+	},
+	"cottonseed-oil": {
+		"name": "kokvilnas sēklu eļļa"
+	},
+	"courgette": {
+		"name": "kabacis"
+	},
+	"cream-of-tartar": {
+		"name": "vīnskābes krēms"
+	},
+	"cucumber": {
+		"name": "gurķis",
+		"plural_name": "gurķi"
+	},
+	"cumin": {
+		"name": "ķimenes"
+	},
+	"daikon": {
+		"name": "daikons",
+		"plural_name": "daikons"
+	},
+	"dairy-products-and-dairy-substitutes": {
+		"name": "piena produkti un piena aizstājēji"
+	},
+	"dandelion": {
+		"name": "pienene"
+	},
+	"demerara-sugar": {
+		"name": "demerāras cukurs"
+	},
+	"dough": {
+		"name": "mīkla"
+	},
+	"edible-cactus": {
+		"name": "ēdamais kaktuss"
+	},
+	"eggplant": {
+		"name": "baklažāns",
+		"plural_name": "baklažāni"
+	},
+	"eggs": {
+		"name": "ola",
+		"plural_name": "olas"
+	},
+	"endive": {
+		"name": "endīvija",
+		"plural_name": "endīvijas"
+	},
+	"fats": {
+		"name": "tauki"
+	},
+	"fava-beans": {
+		"name": "fava pupiņas"
+	},
+	"fiddlehead": {
+		"name": "vijolgalvis"
+	},
+	"fiddlehead-fern": {
+		"name": "vijoļgalvas paparde",
+		"plural_name": "vijoļgalvas papardes"
+	},
+	"fish": {
+		"name": "zivs"
+	},
+	"five-spice-powder": {
+		"name": "piecu garšvielu pulveris"
+	},
+	"flour": {
+		"name": "milti"
+	},
+	"frisee": {
+		"name": "frīze"
+	},
+	"fructose": {
+		"name": "fruktoze"
+	},
+	"fruit": {
+		"name": "auglis"
+	},
+	"fruit-sugar": {
+		"name": "augļu cukurs"
+	},
+	"ful": {
+		"name": "fulls"
+	},
+	"garam-masala": {
+		"name": "garam masala"
+	},
+	"garlic": {
+		"name": "ķiploki",
+		"plural_name": "ķiploki"
+	},
+	"gem-squash": {
+		"name": "gem skvošs"
+	},
+	"ghee": {
+		"name": "gī"
+	},
+	"giblets": {
+		"name": "ķidas"
+	},
+	"ginger": {
+		"name": "ingvers"
+	},
+	"grains": {
+		"name": "graudi"
+	},
+	"granulated-sugar": {
+		"name": "granulēts cukurs"
+	},
+	"grape-seed-oil": {
+		"name": "vīnogu kauliņu eļļa"
+	},
+	"green-onion": {
+		"name": "zaļais sīpols",
+		"plural_name": "zaļie sīpoli"
+	},
+	"heart-of-palm": {
+		"name": "palmu sirds",
+		"plural_name": "plaukstu sirdis"
+	},
+	"hemp": {
+		"name": "kaņepes"
+	},
+	"herbs": {
+		"name": "garšaugi"
+	},
+	"honey": {
+		"name": "medus"
+	},
+	"isomalt": {
+		"name": "izomalts"
+	},
+	"jackfruit": {
+		"name": "džekfrūts",
+		"plural_name": "džekfrūti"
+	},
+	"jaggery": {
+		"name": "džagerija"
+	},
+	"jams": {
+		"name": "ievārījums"
+	},
+	"jellies": {
+		"name": "želejas"
+	},
+	"jerusalem-artichoke": {
+		"name": "topinambūrs"
+	},
+	"jicama": {
+		"name": "jicama"
+	},
+	"kale": {
+		"name": "kacenkāposts"
+	},
+	"kohlrabi": {
+		"name": "kolrābis"
+	},
+	"kumara": {
+		"name": "kumara"
+	},
+	"leavening-agents": {
+		"name": "raugošanas līdzekļi"
+	},
+	"leek": {
+		"name": "puravs",
+		"plural_name": "puravi"
+	},
+	"legumes": {
+		"name": "pākšaugi"
+	},
+	"lemongrass": {
+		"name": "citronzāle"
+	},
+	"lentils": {
+		"name": "lēcas"
+	},
+	"lettuce": {
+		"name": "salāti"
+	},
+	"liver": {
+		"name": "aknas",
+		"plural_name": "aknas"
+	},
+	"maize": {
+		"name": "kukurūza"
+	},
+	"maple-syrup": {
+		"name": "kļavu sīrups"
+	},
+	"meat": {
+		"name": "gaļu"
+	},
+	"milk": {
+		"name": "piens"
+	},
+	"mortadella": {
+		"name": "mortadella"
+	},
+	"mushroom": {
+		"name": "sēne",
+		"plural_name": "sēnes"
+	},
+	"mussels": {
+		"name": "mīdijas"
+	},
+	"nanaimo-bar-mix": {
+		"name": "nanaimo bāra maisījums"
+	},
+	"nori": {
+		"name": "nori"
+	},
+	"nutmeg": {
+		"name": "muskatrieksts"
+	},
+	"nutritional-yeast-flakes": {
+		"name": "uztura rauga pārslas"
+	},
+	"nuts": {
+		"name": "rieksti"
+	},
+	"octopuses": {
+		"name": "astoņkājis",
+		"plural_name": "astoņkāji"
+	},
+	"oils": {
+		"name": "eļļas"
+	},
+	"okra": {
+		"name": "okra"
+	},
+	"olive": {
+		"name": "olīve"
+	},
+	"olive-oil": {
+		"name": "olīveļļa"
+	},
+	"onion": {
+		"name": "sīpols"
+	},
+	"onion-family": {
+		"name": "sīpolu ģimene"
+	},
+	"orange-blossom-water": {
+		"name": "apelsīnu ziedu ūdens"
+	},
+	"oranges": {
+		"name": "apelsīns",
+		"plural_name": "apelsīni"
+	},
+	"oregano": {
+		"name": "oregano"
+	},
+	"oysters": {
+		"name": "austeres"
+	},
+	"panch-puran": {
+		"name": "puran panch"
+	},
+	"paprika": {
+		"name": "paprika"
+	},
+	"parsley": {
+		"name": "pētersīļi"
+	},
+	"parsnip": {
+		"name": "pastinaks",
+		"plural_name": "pastinaki"
+	},
+	"pear": {
+		"name": "bumbieris",
+		"plural_name": "bumbieri"
+	},
+	"peas": {
+		"name": "zirņi"
+	},
+	"pepper": {
+		"name": "pipari",
+		"plural_name": "pipari"
+	},
+	"pineapple": {
+		"name": "ananass",
+		"plural_name": "ananasi"
+	},
+	"plantain": {
+		"name": "ceļmallapa",
+		"plural_name": "ceļmallapas"
+	},
+	"poppy-seeds": {
+		"name": "magoņu sēklas"
+	},
+	"potato": {
+		"name": "kartupelis",
+		"plural_name": "kartupeļi"
+	},
+	"poultry": {
+		"name": "mājputni"
+	},
+	"powdered-sugar": {
+		"name": "pūdercukurs"
+	},
+	"pumpkin": {
+		"name": "ķirbis",
+		"plural_name": "ķirbji"
+	},
+	"pumpkin-seeds": {
+		"name": "ķirbju sēklas"
+	},
+	"radish": {
+		"name": "redīsi",
+		"plural_name": "redīsi"
+	},
+	"raw-sugar": {
+		"name": "jēlcukurs"
+	},
+	"refined-sugar": {
+		"name": "rafinēts cukurs"
+	},
+	"rice": {
+		"name": "rīsi"
+	},
+	"rice-flour": {
+		"name": "rīsu milti"
+	},
+	"rock-sugar": {
+		"name": "akmens cukurs"
+	},
+	"rum": {
+		"name": "rums"
+	},
+	"salmon": {
+		"name": "lasis"
+	},
+	"salt": {
+		"name": "sāls"
+	},
+	"salt-cod": {
+		"name": "sāls menca"
+	},
+	"scallion": {
+		"name": "ķemmīšgliemene",
+		"plural_name": "ķemmīšgliemenes"
+	},
+	"seafood": {
+		"name": "jūras veltes"
+	},
+	"seeds": {
+		"name": "sēklas"
+	},
+	"sesame-seeds": {
+		"name": "sezama sēklas"
+	},
+	"shallot": {
+		"name": "šalotes",
+		"plural_name": "šalotes"
+	},
+	"skate": {
+		"name": "skeit"
+	},
+	"soda": {
+		"name": "soda"
+	},
+	"soda-baking": {
+		"name": "soda, cepamais"
+	},
+	"soybean": {
+		"name": "sojas pupas"
+	},
+	"spaghetti-squash": {
+		"name": "spageti skvošs",
+		"plural_name": "spageti skvoši"
+	},
+	"speck": {
+		"name": "speķis"
+	},
+	"spices": {
+		"name": "garšvielas"
+	},
+	"spinach": {
+		"name": "spināti"
+	},
+	"spring-onion": {
+		"name": "pavasara sīpols",
+		"plural_name": "pavasara sīpoli"
+	},
+	"squash": {
+		"name": "skvošs",
+		"plural_name": "skvoši"
+	},
+	"squash-family": {
+		"name": "skvoša ģimene"
+	},
+	"stockfish": {
+		"name": "zvēru zivis"
+	},
+	"sugar": {
+		"name": "cukurs"
+	},
+	"sunchoke": {
+		"name": "bumbuļu topinambūrs",
+		"plural_name": "bumbuļu topinambūri"
+	},
+	"sunflower-seeds": {
+		"name": "saulespuķu sēklas"
+	},
+	"superfine-sugar": {
+		"name": "supersmalks cukurs"
+	},
+	"sweet-potato": {
+		"name": "saldais kartupelis",
+		"plural_name": "saldie kartupeļi"
+	},
+	"sweetcorn": {
+		"name": "cukurkukurūza",
+		"plural_name": "cukurkukurūzas"
+	},
+	"sweeteners": {
+		"name": "saldinātāji"
+	},
+	"tahini": {
+		"name": "tahīni"
+	},
+	"taro": {
+		"name": "taro",
+		"plural_name": "taro"
+	},
+	"teff": {
+		"name": "teff"
+	},
+	"tomato": {
+		"name": "tomāts",
+		"plural_name": "tomāti"
+	},
+	"trout": {
+		"name": "forele"
+	},
+	"tubers": {
+		"name": "bumbuļi",
+		"plural_name": "bumbuļi"
+	},
+	"tuna": {
+		"name": "tuncis"
+	},
+	"turbanado-sugar": {
+		"name": "turbanādo cukurs"
+	},
+	"turnip": {
+		"name": "rācenis",
+		"plural_name": "rāceņi"
+	},
+	"unrefined-sugar": {
+		"name": "nerafinēts cukurs"
+	},
+	"vanilla": {
+		"name": "vaniļa"
+	},
+	"vegetables": {
+		"name": "dārzeņi"
+	},
+	"watercress": {
+		"name": "ūdenskrese"
+	},
+	"watermelon": {
+		"name": "arbūzs",
+		"plural_name": "arbūzi"
+	},
+	"white-mushroom": {
+		"name": "baltā sēne",
+		"plural_name": "baltās sēnes"
+	},
+	"white-sugar": {
+		"name": "baltais cukurs"
+	},
+	"xanthan-gum": {
+		"name": "ksantāna sveķi"
+	},
+	"yam": {
+		"name": "jamss",
+		"plural_name": "žamji"
+	},
+	"yeast": {
+		"name": "raugs"
+	},
+	"zucchini": {
+		"name": "cukini",
+		"plural_name": "cukini"
+	}
 }

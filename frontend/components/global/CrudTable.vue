@@ -44,6 +44,8 @@
       item-key="id"
       :show-select="bulkActions.length > 0"
       :headers="activeHeaders"
+      :sort-by="initialSort"
+      :sort-desc="initialSortDesc"
       :items="data || []"
       :items-per-page="15"
       :search="search"
@@ -57,12 +59,12 @@
           :buttons="[
             {
               icon: $globals.icons.edit,
-              text: $t('general.edit'),
+              text: $tc('general.edit'),
               event: 'edit',
             },
             {
               icon: $globals.icons.delete,
-              text: $t('general.delete'),
+              text: $tc('general.delete'),
               event: 'delete',
             },
           ]"
@@ -97,6 +99,8 @@ export interface TableHeaders {
   value: string;
   show: boolean;
   align?: string;
+  sortable?: boolean;
+  sort?: (a: any, b: any) => number;
 }
 
 export interface BulkAction {
@@ -125,6 +129,14 @@ export default defineComponent({
     bulkActions: {
       type: Array as () => BulkAction[],
       default: () => [],
+    },
+    initialSort: {
+      type: String,
+      default: "id",
+    },
+    initialSortDesc: {
+      type: Boolean,
+      default: false,
     },
   },
   setup(props, context) {
@@ -160,6 +172,8 @@ export default defineComponent({
       props.bulkActions.forEach((action) => {
         handlers[action.event] = () => {
           context.emit(action.event, selected.value);
+          // clear selection
+          selected.value = [];
         };
       });
 

@@ -173,7 +173,7 @@ def recipe_data(name: str, slug: str, id: str, userId: str, groupId: str) -> dic
         "dateAdded": "2022-09-03",
         "dateUpdated": "2022-09-10T15:18:19.866085",
         "createdAt": "2022-09-03T18:31:17.488118",
-        "updateAt": "2022-09-10T15:18:19.869630",
+        "updatedAt": "2022-09-10T15:18:19.869630",
         "recipeInstructions": [
             {
                 "id": "60ae53a3-b3ff-40ee-bae3-89fea0b1c637",
@@ -231,7 +231,7 @@ def recipe_data(name: str, slug: str, id: str, userId: str, groupId: str) -> dic
     }
 
 
-def login(username="changeme@email.com", password="MyPassword"):
+def login(username="changeme@example.com", password="MyPassword"):
     payload = {"username": username, "password": password}
     r = requests.post("http://localhost:9000/api/auth/token", payload)
 

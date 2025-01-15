@@ -1,5 +1,6 @@
 import { computed, ComputedRef, ref, Ref, useContext } from "@nuxtjs/composition-api";
 import { UserOut } from "~/lib/api/types/user";
+import { useNavigationWarning } from "~/composables/use-navigation-warning";
 
 export enum PageMode {
   EDIT = "EDIT",
@@ -51,12 +52,21 @@ interface PageState {
   toggleCookMode: () => void;
 }
 
-const memo: Record<string, PageState> = {};
+type PageRefs = ReturnType<typeof pageRefs>;
 
-function pageStateConstructor(slug: string): PageState {
-  const slugRef = ref(slug);
-  const pageModeRef = ref(PageMode.VIEW);
-  const editModeRef = ref(EditorMode.FORM);
+const memo: Record<string, PageRefs> = {};
+
+function pageRefs(slug: string) {
+  return {
+    slugRef: ref(slug),
+    pageModeRef: ref(PageMode.VIEW),
+    editModeRef: ref(EditorMode.FORM),
+    imageKey: ref(1),
+  };
+}
+
+function pageState({ slugRef, pageModeRef, editModeRef, imageKey }: PageRefs): PageState {
+  const { activateNavigationWarning, deactivateNavigationWarning } = useNavigationWarning();
 
   const toggleEditMode = () => {
     if (editModeRef.value === EditorMode.FORM) {
@@ -81,8 +91,13 @@ function pageStateConstructor(slug: string): PageState {
   const setMode = (toMode: PageMode) => {
     const fromMode = pageModeRef.value;
 
-    if (fromMode === PageMode.EDIT && toMode === PageMode.VIEW) {
-      setEditMode(EditorMode.FORM);
+    if (fromMode === PageMode.EDIT) {
+      if (toMode === PageMode.VIEW) {
+        setEditMode(EditorMode.FORM);
+      }
+      deactivateNavigationWarning();
+    } else if (toMode === PageMode.EDIT) {
+      activateNavigationWarning();
     }
 
     pageModeRef.value = toMode;
@@ -92,7 +107,7 @@ function pageStateConstructor(slug: string): PageState {
     slug: slugRef,
     pageMode: computed(() => pageModeRef.value),
     editMode: computed(() => editModeRef.value),
-    imageKey: ref(1),
+    imageKey,
 
     toggleEditMode,
     setMode,
@@ -120,10 +135,10 @@ function pageStateConstructor(slug: string): PageState {
  */
 export function usePageState(slug: string): PageState {
   if (!memo[slug]) {
-    memo[slug] = pageStateConstructor(slug);
+    memo[slug] = pageRefs(slug);
   }
 
-  return memo[slug];
+  return pageState(memo[slug]);
 }
 
 export function clearPageState(slug: string) {
@@ -144,12 +159,15 @@ export function usePageUser(): { user: UserOut } {
         id: "",
         group: "",
         groupId: "",
+        groupSlug: "",
+        household: "",
+        householdId: "",
+        householdSlug: "",
         cacheKey: "",
         email: "",
       },
     };
   }
 
-  // @ts-expect-error - We know that the API always returns a UserOut, but I'm unsure how to type the $auth to know what type user is
-  return { user: $auth.user as UserOut };
+  return { user: $auth.user };
 }

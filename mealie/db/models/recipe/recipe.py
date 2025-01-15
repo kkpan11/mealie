@@ -1,18 +1,23 @@
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 from typing import TYPE_CHECKING
 
 import sqlalchemy as sa
 import sqlalchemy.orm as orm
+from pydantic import ConfigDict
 from sqlalchemy import event
+from sqlalchemy.ext.associationproxy import AssociationProxy, association_proxy
 from sqlalchemy.ext.orderinglist import ordering_list
 from sqlalchemy.orm import Mapped, mapped_column, validates
-from text_unidecode import unidecode
+from sqlalchemy.orm.attributes import get_history
+from sqlalchemy.orm.session import object_session
 
+from mealie.db.models._model_utils.auto_init import auto_init
+from mealie.db.models._model_utils.datetime import NaiveDateTime, get_utc_today
 from mealie.db.models._model_utils.guid import GUID
 
 from .._model_base import BaseMixins, SqlAlchemyBase
-from .._model_utils import auto_init
-from ..users.user_to_favorite import users_to_favorites
+from ..household.household_to_recipe import HouseholdToRecipe
+from ..users.user_to_recipe import UserToRecipe
 from .api_extras import ApiExtras, api_extras
 from .assets import RecipeAsset
 from .category import recipes_to_categories
@@ -28,7 +33,8 @@ from .tag import recipes_to_tags
 from .tool import recipes_to_tools
 
 if TYPE_CHECKING:
-    from ..group import Group, GroupMealPlan, ShoppingListItemRecipeReference, ShoppingListRecipeReference
+    from ..group import Group, GroupMealPlan
+    from ..household import Household, ShoppingListItemRecipeReference, ShoppingListRecipeReference
     from ..users import User
     from . import Category, Tag, Tool
 
@@ -46,15 +52,29 @@ class RecipeModel(SqlAlchemyBase, BaseMixins):
     group_id: Mapped[GUID] = mapped_column(GUID, sa.ForeignKey("groups.id"), nullable=False, index=True)
     group: Mapped["Group"] = orm.relationship("Group", back_populates="recipes", foreign_keys=[group_id])
 
+    household_id: AssociationProxy[GUID] = association_proxy("user", "household_id")
+    household: AssociationProxy["Household"] = association_proxy("user", "household")
+
     user_id: Mapped[GUID | None] = mapped_column(GUID, sa.ForeignKey("users.id", use_alter=True), index=True)
     user: Mapped["User"] = orm.relationship("User", uselist=False, foreign_keys=[user_id])
 
-    meal_entries: Mapped["GroupMealPlan"] = orm.relationship(
-        "GroupMealPlan", back_populates="recipe", cascade="all, delete-orphan"
+    rating: Mapped[float | None] = mapped_column(sa.Float, index=True, nullable=True)
+    rated_by: Mapped[list["User"]] = orm.relationship(
+        "User",
+        secondary=UserToRecipe.__tablename__,
+        back_populates="rated_recipes",
+        overlaps="recipe,favorited_by,favorited_recipes",
+    )
+    favorited_by: Mapped[list["User"]] = orm.relationship(
+        "User",
+        secondary=UserToRecipe.__tablename__,
+        primaryjoin="and_(RecipeModel.id==UserToRecipe.recipe_id, UserToRecipe.is_favorite==True)",
+        back_populates="favorite_recipes",
+        overlaps="recipe,rated_by,rated_recipes",
     )
 
-    favorited_by: Mapped[list["User"]] = orm.relationship(
-        "User", secondary=users_to_favorites, back_populates="favorite_recipes"
+    meal_entries: Mapped[list["GroupMealPlan"]] = orm.relationship(
+        "GroupMealPlan", back_populates="recipe", cascade="all, delete-orphan"
     )
 
     # General Recipe Properties
@@ -70,9 +90,10 @@ class RecipeModel(SqlAlchemyBase, BaseMixins):
     cook_time: Mapped[str | None] = mapped_column(sa.String)
 
     recipe_yield: Mapped[str | None] = mapped_column(sa.String)
-    recipeCuisine: Mapped[str | None] = mapped_column(sa.String)
+    recipe_yield_quantity: Mapped[float] = mapped_column(sa.Float, index=True, default=0)
+    recipe_servings: Mapped[float] = mapped_column(sa.Float, index=True, default=0)
 
-    assets: Mapped[RecipeAsset] = orm.relationship("RecipeAsset", cascade="all, delete-orphan")
+    assets: Mapped[list[RecipeAsset]] = orm.relationship("RecipeAsset", cascade="all, delete-orphan")
     nutrition: Mapped[Nutrition] = orm.relationship("Nutrition", uselist=False, cascade="all, delete-orphan")
     recipe_category: Mapped[list["Category"]] = orm.relationship(
         "Category", secondary=recipes_to_categories, back_populates="recipes"
@@ -110,15 +131,17 @@ class RecipeModel(SqlAlchemyBase, BaseMixins):
     )
     tags: Mapped[list["Tag"]] = orm.relationship("Tag", secondary=recipes_to_tags, back_populates="recipes")
     notes: Mapped[list[Note]] = orm.relationship("Note", cascade="all, delete-orphan")
-    rating: Mapped[int | None] = mapped_column(sa.Integer)
     org_url: Mapped[str | None] = mapped_column(sa.String)
     extras: Mapped[list[ApiExtras]] = orm.relationship("ApiExtras", cascade="all, delete-orphan")
-    is_ocr_recipe: Mapped[bool | None] = mapped_column(sa.Boolean, default=False)
 
     # Time Stamp Properties
-    date_added: Mapped[date | None] = mapped_column(sa.Date, default=date.today)
-    date_updated: Mapped[datetime | None] = mapped_column(sa.DateTime)
-    last_made: Mapped[datetime | None] = mapped_column(sa.DateTime)
+    date_added: Mapped[date | None] = mapped_column(sa.Date, default=get_utc_today)
+    date_updated: Mapped[datetime | None] = mapped_column(NaiveDateTime)
+
+    last_made: Mapped[datetime | None] = mapped_column(NaiveDateTime)
+    made_by: Mapped[list["Household"]] = orm.relationship(
+        "Household", secondary=HouseholdToRecipe.__tablename__, back_populates="made_recipes"
+    )
 
     # Shopping List Refs
     shopping_list_refs: Mapped[list["ShoppingListRecipeReference"]] = orm.relationship(
@@ -135,10 +158,9 @@ class RecipeModel(SqlAlchemyBase, BaseMixins):
     # Automatically updated by sqlalchemy event, do not write to this manually
     name_normalized: Mapped[str] = mapped_column(sa.String, nullable=False, index=True)
     description_normalized: Mapped[str | None] = mapped_column(sa.String, index=True)
-
-    class Config:
-        get_attr = "slug"
-        exclude = {
+    model_config = ConfigDict(
+        get_attr="slug",
+        exclude={
             "assets",
             "notes",
             "nutrition",
@@ -147,7 +169,12 @@ class RecipeModel(SqlAlchemyBase, BaseMixins):
             "settings",
             "comments",
             "timeline_events",
-        }
+        },
+    )
+
+    # Deprecated
+    recipeCuisine: Mapped[str | None] = mapped_column(sa.String)
+    is_ocr_recipe: Mapped[bool | None] = mapped_column(sa.Boolean, default=False)
 
     @validates("name")
     def validate_name(self, _, name):
@@ -169,7 +196,7 @@ class RecipeModel(SqlAlchemyBase, BaseMixins):
         settings: dict | None = None,
         **_,
     ) -> None:
-        self.nutrition = Nutrition(**nutrition) if nutrition else Nutrition()
+        self.nutrition = Nutrition(**(nutrition or {}))
 
         if recipe_instructions is not None:
             self.recipe_instructions = [RecipeInstruction(**step, session=session) for step in recipe_instructions]
@@ -180,19 +207,19 @@ class RecipeModel(SqlAlchemyBase, BaseMixins):
         if assets:
             self.assets = [RecipeAsset(**a) for a in assets]
 
-        self.settings = RecipeSettings(**settings) if settings else RecipeSettings()
+        self.settings = RecipeSettings(**(settings or {}))
 
         if notes:
             self.notes = [Note(**n) for n in notes]
 
-        self.date_updated = datetime.now()
+        self.date_updated = datetime.now(UTC)
 
         # SQLAlchemy events do not seem to register things that are set during auto_init
         if name is not None:
-            self.name_normalized = unidecode(name).lower().strip()
+            self.name_normalized = self.normalize(name)
 
         if description is not None:
-            self.description_normalized = unidecode(description).lower().strip()
+            self.description_normalized = self.normalize(description)
 
         tableargs = [  # base set of indices
             sa.UniqueConstraint("slug", "group_id", name="recipe_slug_group_id_key"),
@@ -237,12 +264,31 @@ class RecipeModel(SqlAlchemyBase, BaseMixins):
 
 @event.listens_for(RecipeModel.name, "set")
 def receive_name(target: RecipeModel, value: str, oldvalue, initiator):
-    target.name_normalized = unidecode(value).lower().strip()
+    target.name_normalized = RecipeModel.normalize(value)
 
 
 @event.listens_for(RecipeModel.description, "set")
 def receive_description(target: RecipeModel, value: str, oldvalue, initiator):
     if value is not None:
-        target.description_normalized = unidecode(value).lower().strip()
+        target.description_normalized = RecipeModel.normalize(value)
     else:
         target.description_normalized = None
+
+
+@event.listens_for(RecipeModel, "before_update")
+def calculate_rating(mapper, connection, target: RecipeModel):
+    session = object_session(target)
+    if not (session and session.is_modified(target, "rating")):
+        return
+
+    history = get_history(target, "rating")
+    old_value = history.deleted[0] if history.deleted else None
+    new_value = history.added[0] if history.added else None
+    if old_value == new_value:
+        return
+
+    target.rating = (
+        session.query(sa.func.avg(UserToRecipe.rating))
+        .filter(UserToRecipe.recipe_id == target.id, UserToRecipe.rating is not None, UserToRecipe.rating > 0)
+        .scalar()
+    )

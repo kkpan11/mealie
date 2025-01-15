@@ -23,7 +23,7 @@ function import_from_file () {
   do
     echo $line
     curl -X 'POST' \
-      "$3/api/recipes/create-url" \
+      "$3/api/recipes/create/url" \
       -H "Authorization: Bearer $2" \
       -H 'accept: application/json' \
       -H 'Content-Type: application/json' \
@@ -33,7 +33,7 @@ function import_from_file () {
 }
 
 input="list"
-mail="changeme@email.com"
+mail="changeme@example.com"
 password="MyPassword"
 mealie_url=http://localhost:9000
 
@@ -81,11 +81,11 @@ def import_from_file(input_file, token, mealie_url):
       data = {
         'url': line
       }
-      response = requests.post(mealie_url + "/api/recipes/create-url", headers=headers, json=data)
+      response = requests.post(mealie_url + "/api/recipes/create/url", headers=headers, json=data)
       print(response.text)
 
 input_file="list"
-mail="changeme@email.com"
+mail="changeme@example.com"
 password="MyPassword"
 mealie_url="http://localhost:9000"
 
@@ -93,4 +93,3 @@ mealie_url="http://localhost:9000"
 token = authentication(mail, password, mealie_url)
 import_from_file(input_file, token, mealie_url)
 ```
-

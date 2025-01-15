@@ -9,19 +9,20 @@ import {
   ShoppingListMultiPurposeLabelUpdate,
   ShoppingListOut,
   ShoppingListUpdate,
-} from "~/lib/api/types/group";
+} from "~/lib/api/types/household";
 
 const prefix = "/api";
 
 const routes = {
-  shoppingLists: `${prefix}/groups/shopping/lists`,
-  shoppingListsId: (id: string) => `${prefix}/groups/shopping/lists/${id}`,
-  shoppingListIdAddRecipe: (id: string, recipeId: string) => `${prefix}/groups/shopping/lists/${id}/recipe/${recipeId}`,
-  shoppingListIdRemoveRecipe: (id: string, recipeId: string) => `${prefix}/groups/shopping/lists/${id}/recipe/${recipeId}/delete`,
-  shoppingListIdUpdateLabelSettings: (id: string) => `${prefix}/groups/shopping/lists/${id}/label-settings`,
+  shoppingLists: `${prefix}/households/shopping/lists`,
+  shoppingListsId: (id: string) => `${prefix}/households/shopping/lists/${id}`,
+  shoppingListIdAddRecipe: (id: string, recipeId: string) => `${prefix}/households/shopping/lists/${id}/recipe/${recipeId}`,
+  shoppingListIdRemoveRecipe: (id: string, recipeId: string) => `${prefix}/households/shopping/lists/${id}/recipe/${recipeId}/delete`,
+  shoppingListIdUpdateLabelSettings: (id: string) => `${prefix}/households/shopping/lists/${id}/label-settings`,
 
-  shoppingListItems: `${prefix}/groups/shopping/items`,
-  shoppingListItemsId: (id: string) => `${prefix}/groups/shopping/items/${id}`,
+  shoppingListItems: `${prefix}/households/shopping/items`,
+  shoppingListItemsCreateBulk: `${prefix}/households/shopping/items/create-bulk`,
+  shoppingListItemsId: (id: string) => `${prefix}/households/shopping/items/${id}`,
 };
 
 export class ShoppingListsApi extends BaseCRUDAPI<ShoppingListCreate, ShoppingListOut, ShoppingListUpdate> {
@@ -48,6 +49,10 @@ export class ShoppingListItemsApi extends BaseCRUDAPI<
 > {
   baseRoute = routes.shoppingListItems;
   itemRoute = routes.shoppingListItemsId;
+
+  async createMany(items: ShoppingListItemCreate[]) {
+    return await this.requests.post(routes.shoppingListItemsCreateBulk, items);
+  }
 
   async updateMany(items: ShoppingListItemOut[]) {
     return await this.requests.put(routes.shoppingListItems, items);

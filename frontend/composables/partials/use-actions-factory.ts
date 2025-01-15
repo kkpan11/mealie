@@ -1,35 +1,32 @@
 import { Ref, useAsync } from "@nuxtjs/composition-api";
 import { useAsyncKey } from "../use-utils";
+import { BoundT } from "./types";
 import { BaseCRUDAPI, BaseCRUDAPIReadOnly } from "~/lib/api/base/base-clients";
 import { QueryValue } from "~/lib/api/base/route";
 
-type BoundT = {
-  id?: string | number;
-};
-
-interface PublicStoreActions<T extends BoundT> {
+interface ReadOnlyStoreActions<T extends BoundT> {
   getAll(page?: number, perPage?: number, params?: any): Ref<T[] | null>;
-  refresh(): Promise<void>;
+  refresh(page?: number, perPage?: number, params?: any): Promise<void>;
 }
 
-interface StoreActions<T extends BoundT> extends PublicStoreActions<T> {
-  createOne(createData: T): Promise<void>;
-  updateOne(updateData: T): Promise<void>;
-  deleteOne(id: string | number): Promise<void>;
+interface StoreActions<T extends BoundT> extends ReadOnlyStoreActions<T> {
+  createOne(createData: T): Promise<T | null>;
+  updateOne(updateData: T): Promise<T | null>;
+  deleteOne(id: string | number): Promise<T | null>;
 }
 
 
 /**
- * usePublicStoreActions is a factory function that returns a set of methods
+ * useReadOnlyActions is a factory function that returns a set of methods
  * that can be reused to manage the state of a data store without using
  * Vuex. This is primarily used for basic GET/GETALL operations that required
  * a lot of refreshing hooks to be called on operations
  */
-export function usePublicStoreActions<T extends BoundT>(
+export function useReadOnlyActions<T extends BoundT>(
   api: BaseCRUDAPIReadOnly<T>,
   allRef: Ref<T[] | null> | null,
   loading: Ref<boolean>
-): PublicStoreActions<T> {
+): ReadOnlyStoreActions<T> {
   function getAll(page = 1, perPage = -1, params = {} as Record<string, QueryValue>) {
     params.orderBy ??= "name";
     params.orderDirection ??= "asc";
@@ -37,6 +34,7 @@ export function usePublicStoreActions<T extends BoundT>(
     loading.value = true;
     const allItems = useAsync(async () => {
       const { data } = await api.getAll(page, perPage, params);
+      loading.value = false;
 
       if (data && allRef) {
         allRef.value = data.items;
@@ -49,13 +47,15 @@ export function usePublicStoreActions<T extends BoundT>(
       }
     }, useAsyncKey());
 
-    loading.value = false;
     return allItems;
   }
 
-  async function refresh() {
+  async function refresh(page = 1, perPage = -1, params = {} as Record<string, QueryValue>) {
+    params.orderBy ??= "name";
+    params.orderDirection ??= "asc";
+
     loading.value = true;
-    const { data } = await api.getAll();
+    const { data } = await api.getAll(page, perPage, params);
 
     if (data && data.items && allRef) {
       allRef.value = data.items;
@@ -88,6 +88,7 @@ export function useStoreActions<T extends BoundT>(
     loading.value = true;
     const allItems = useAsync(async () => {
       const { data } = await api.getAll(page, perPage, params);
+      loading.value = false;
 
       if (data && allRef) {
         allRef.value = data.items;
@@ -100,13 +101,15 @@ export function useStoreActions<T extends BoundT>(
       }
     }, useAsyncKey());
 
-    loading.value = false;
     return allItems;
   }
 
-  async function refresh() {
+  async function refresh(page = 1, perPage = -1, params = {} as Record<string, QueryValue>) {
+    params.orderBy ??= "name";
+    params.orderDirection ??= "asc";
+
     loading.value = true;
-    const { data } = await api.getAll();
+    const { data } = await api.getAll(page, perPage, params);
 
     if (data && data.items && allRef) {
       allRef.value = data.items;
@@ -121,31 +124,34 @@ export function useStoreActions<T extends BoundT>(
     if (data && allRef?.value) {
       allRef.value.push(data);
     } else {
-      refresh();
+      await refresh();
     }
     loading.value = false;
+    return data;
   }
 
   async function updateOne(updateData: T) {
     if (!updateData.id) {
-      return;
+      return null;
     }
 
     loading.value = true;
     const { data } = await api.updateOne(updateData.id, updateData);
     if (data && allRef?.value) {
-      refresh();
+      await refresh();
     }
     loading.value = false;
+    return data;
   }
 
   async function deleteOne(id: string | number) {
     loading.value = true;
     const { response } = await api.deleteOne(id);
     if (response && allRef?.value) {
-      refresh();
+      await refresh();
     }
     loading.value = false;
+    return response?.data || null;
   }
 
   return {

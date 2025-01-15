@@ -2,6 +2,7 @@ from collections.abc import Callable
 from logging import Logger
 from typing import Generic, TypeVar
 
+import sqlalchemy.exc
 from fastapi import HTTPException, status
 from pydantic import UUID4, BaseModel
 
@@ -57,10 +58,16 @@ class HttpRepo(Generic[C, R, U]):
         # Respond
         msg = self.get_exception_message(ex)
 
-        raise HTTPException(
-            status.HTTP_400_BAD_REQUEST,
-            detail=ErrorResponse.respond(message=msg, exception=str(ex)),
-        )
+        if isinstance(ex, sqlalchemy.exc.NoResultFound):
+            raise HTTPException(
+                status.HTTP_404_NOT_FOUND,
+                detail=ErrorResponse.respond(message=msg, exception=str(ex)),
+            )
+        else:
+            raise HTTPException(
+                status.HTTP_400_BAD_REQUEST,
+                detail=ErrorResponse.respond(message=msg, exception=str(ex)),
+            )
 
     def create_one(self, data: C) -> R | None:
         item: R | None = None
@@ -108,7 +115,7 @@ class HttpRepo(Generic[C, R, U]):
             )
 
         try:
-            item = self.repo.patch(item_id, data.dict(exclude_unset=True, exclude_defaults=True))
+            item = self.repo.patch(item_id, data.model_dump(exclude_unset=True, exclude_defaults=True))
         except Exception as ex:
             self.handle_exception(ex)
 

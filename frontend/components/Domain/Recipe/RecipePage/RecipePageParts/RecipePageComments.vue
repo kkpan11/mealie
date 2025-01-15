@@ -9,7 +9,7 @@
     <v-divider class="mx-2"></v-divider>
     <div v-if="user.id" class="d-flex flex-column">
       <div class="d-flex mt-3" style="gap: 10px">
-        <UserAvatar size="40" :user-id="user.id" />
+        <UserAvatar :tooltip="false" size="40" :user-id="user.id" />
 
         <v-textarea
           v-model="comment"
@@ -30,12 +30,12 @@
         </BaseButton>
       </div>
     </div>
-    <div v-for="comment in comments" :key="comment.id" class="d-flex my-2" style="gap: 10px">
-      <UserAvatar size="40" :user-id="comment.userId" />
+    <div v-for="comment in recipe.comments" :key="comment.id" class="d-flex my-2" style="gap: 10px">
+      <UserAvatar :tooltip="false" size="40" :user-id="comment.userId" />
       <v-card outlined class="flex-grow-1">
         <v-card-text class="pa-3 pb-0">
-          <p class="">{{ comment.user.username }} • {{ $d(Date.parse(comment.createdAt), "medium") }}</p>
-          {{ comment.text }}
+          <p class="">{{ comment.user.fullName }} • {{ $d(Date.parse(comment.createdAt), "medium") }}</p>
+          <SafeMarkdown :source="comment.text" />
         </v-card-text>
         <v-card-actions class="justify-end mt-0 pt-0">
           <v-btn
@@ -54,17 +54,19 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, toRefs, onMounted, reactive } from "@nuxtjs/composition-api";
+import { defineComponent, toRefs, reactive } from "@nuxtjs/composition-api";
 import { useUserApi } from "~/composables/api";
-import { Recipe, RecipeCommentOut } from "~/lib/api/types/recipe";
+import { Recipe } from "~/lib/api/types/recipe";
 import UserAvatar from "~/components/Domain/User/UserAvatar.vue";
 import { NoUndefinedField } from "~/lib/api/types/non-generated";
 import { usePageUser } from "~/composables/recipe-page/shared-state";
+import SafeMarkdown from "~/components/global/SafeMarkdown.vue";
 
 export default defineComponent({
   components: {
     UserAvatar,
-  },
+    SafeMarkdown
+},
   props: {
     recipe: {
       type: Object as () => NoUndefinedField<Recipe>,
@@ -74,20 +76,10 @@ export default defineComponent({
   setup(props) {
     const api = useUserApi();
 
-    const comments = ref<RecipeCommentOut[]>([]);
-
     const { user } = usePageUser();
 
     const state = reactive({
       comment: "",
-    });
-
-    onMounted(async () => {
-      const { data } = await api.recipes.comments.byRecipe(props.recipe.slug);
-
-      if (data) {
-        comments.value = data;
-      }
     });
 
     async function submitComment() {
@@ -97,7 +89,8 @@ export default defineComponent({
       });
 
       if (data) {
-        comments.value.push(data);
+        // @ts-ignore username is always populated here
+        props.recipe.comments.push(data);
       }
 
       state.comment = "";
@@ -107,11 +100,11 @@ export default defineComponent({
       const { response } = await api.recipes.comments.deleteOne(id);
 
       if (response?.status === 200) {
-        comments.value = comments.value.filter((comment) => comment.id !== id);
+        props.recipe.comments = props.recipe.comments.filter((comment) => comment.id !== id);
       }
     }
 
-    return { api, comments, ...toRefs(state), submitComment, deleteComment, user };
+    return { api, ...toRefs(state), submitComment, deleteComment, user };
   },
 });
 </script>

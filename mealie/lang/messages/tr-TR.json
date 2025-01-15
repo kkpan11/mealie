@@ -3,7 +3,20 @@
         "server-error": "Beklenmedik bir hata oluştu"
     },
     "recipe": {
-        "unique-name-error": "Tarif adları benzersiz olmalıdır"
+        "unique-name-error": "Tarif adları benzersiz olmalıdır",
+        "recipe-created": "Tarif oluşturuldu",
+        "recipe-defaults": {
+            "ingredient-note": "1 Bardak Un",
+            "step-text": "Tarif sayfasındaki tarif adımlarının yanı sıra diğer alanlar da markdown destekler.\n\n**Bağlantı ekle**\n\n[Bağlantım](https://demo.mealie.io)\n"
+        },
+        "servings-text": {
+            "makes": "Makes",
+            "serves": "Serves",
+            "serving": "Serving",
+            "servings": "Servings",
+            "yield": "Yield",
+            "yields": "Yields"
+        }
     },
     "mealplan": {
         "no-recipes-match-your-rules": "Hiçbir tarif kurallarınıza uymamaktadır"
@@ -31,5 +44,37 @@
         "generic-updated-with-url": "{name} güncellendi, {url}",
         "generic-duplicated": "{name} yinelendi",
         "generic-deleted": "{name} silindi"
+    },
+    "datetime": {
+        "year": "yıl|yıl",
+        "day": "gün|gün",
+        "hour": "saat|saat",
+        "minute": "dakika|dakika",
+        "second": "saniye|saniye",
+        "millisecond": "milisaniye|milisaniye",
+        "microsecond": "mikrosaniye|mikrosaniye"
+    },
+    "emails": {
+        "password": {
+            "subject": "Mealie Şifremi Unuttum",
+            "header_text": "Şifremi Unuttum",
+            "message_top": "Şifre yenileme talebinde bulundunuz.",
+            "message_bottom": "Şifrenizi sıfırlamak için lütfen yukarıdaki butona tıklayın.",
+            "button_text": "Şifreyi Sıfırla"
+        },
+        "invitation": {
+            "subject": "Mealie'ye Katılım Daveti",
+            "header_text": "Davet Edildiniz!",
+            "message_top": "Mealie'ye katılmaya davet edildiniz.",
+            "message_bottom": "Daveti kabul etmek için lütfen yukarıdaki butona tıklayın.",
+            "button_text": "Daveti Kabul Et"
+        },
+        "test": {
+            "subject": "Mealie Deneme E-Postası",
+            "header_text": "Deneme E-Postası",
+            "message_top": "Bu bir test e-postasıdır.",
+            "message_bottom": "E-postayı test etmek için lütfen yukarıdaki butona tıklayın.",
+            "button_text": "Mealie'yi Aç"
+        }
     }
 }

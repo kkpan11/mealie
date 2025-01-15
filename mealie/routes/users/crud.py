@@ -1,7 +1,8 @@
 from fastapi import Depends, HTTPException, status
 from pydantic import UUID4
 
-from mealie.core.security import hash_password, verify_password
+from mealie.core.security import hash_password
+from mealie.core.security.providers.credentials_provider import CredentialsProvider
 from mealie.db.models.users.users import AuthMethod
 from mealie.routes._base import BaseAdminController, BaseUserController, controller
 from mealie.routes._base.mixins import HttpRepo
@@ -10,7 +11,7 @@ from mealie.routes.users._helpers import assert_user_change_allowed
 from mealie.schema.response import ErrorResponse, SuccessResponse
 from mealie.schema.response.pagination import PaginationQuery
 from mealie.schema.user import ChangePassword, UserBase, UserIn, UserOut
-from mealie.schema.user.user import UserPagination
+from mealie.schema.user.user import UserPagination, UserRatings, UserRatingSummary
 
 user_router = UserAPIRouter(prefix="/users", tags=["Users: CRUD"])
 admin_router = AdminAPIRouter(prefix="/users", tags=["Users: Admin CRUD"])
@@ -24,12 +25,14 @@ class AdminUserController(BaseAdminController):
 
     @admin_router.get("", response_model=UserPagination)
     def get_all(self, q: PaginationQuery = Depends(PaginationQuery)):
+        """Returns all users from all groups"""
+
         response = self.repos.users.page_all(
             pagination=q,
             override=UserOut,
         )
 
-        response.set_pagination_guides(admin_router.url_path_for("get_all"), q.dict())
+        response.set_pagination_guides(admin_router.url_path_for("get_all"), q.model_dump())
         return response
 
     @admin_router.post("", response_model=UserOut, status_code=201)
@@ -59,6 +62,25 @@ class UserController(BaseUserController):
     def get_logged_in_user(self):
         return self.user
 
+    @user_router.get("/self/ratings", response_model=UserRatings[UserRatingSummary])
+    def get_logged_in_user_ratings(self):
+        return UserRatings(ratings=self.repos.user_ratings.get_by_user(self.user.id))
+
+    @user_router.get("/self/ratings/{recipe_id}", response_model=UserRatingSummary)
+    def get_logged_in_user_rating_for_recipe(self, recipe_id: UUID4):
+        user_rating = self.repos.user_ratings.get_by_user_and_recipe(self.user.id, recipe_id)
+        if user_rating:
+            return user_rating
+        else:
+            raise HTTPException(
+                status.HTTP_404_NOT_FOUND,
+                ErrorResponse.respond("User has not rated this recipe"),
+            )
+
+    @user_router.get("/self/favorites", response_model=UserRatings[UserRatingSummary])
+    def get_logged_in_user_favorites(self):
+        return UserRatings(ratings=self.repos.user_ratings.get_by_user(self.user.id, favorites_only=True))
+
     @user_router.put("/password")
     def update_password(self, password_change: ChangePassword):
         """Resets the User Password"""
@@ -66,7 +88,7 @@ class UserController(BaseUserController):
             raise HTTPException(
                 status.HTTP_400_BAD_REQUEST, ErrorResponse.respond(self.t("user.ldap-update-password-unavailable"))
             )
-        if not verify_password(password_change.current_password, self.user.password):
+        if not CredentialsProvider.verify_password(password_change.current_password, self.user.password):
             raise HTTPException(
                 status.HTTP_400_BAD_REQUEST, ErrorResponse.respond(self.t("user.invalid-current-password"))
             )
@@ -99,7 +121,7 @@ class UserController(BaseUserController):
             )
 
         try:
-            self.repos.users.update(item_id, new_data.dict())
+            self.repos.users.update(item_id, new_data.model_dump())
         except Exception as e:
             raise HTTPException(
                 status.HTTP_400_BAD_REQUEST,

@@ -1,6 +1,11 @@
 from inspect import signature
 
-from fastapi.exceptions import HTTPException, ValidationError
+from fastapi.exceptions import HTTPException, RequestValidationError
+from pydantic import ValidationError
+
+
+def format_exception(ex: Exception) -> str:
+    return f"{ex.__class__.__name__}: {ex}"
 
 
 def make_dependable(cls):
@@ -25,10 +30,10 @@ def make_dependable(cls):
         try:
             signature(init_cls_and_handle_errors).bind(*args, **kwargs)
             return cls(*args, **kwargs)
-        except ValidationError as e:
+        except (ValidationError, RequestValidationError) as e:
             for error in e.errors():
-                error["loc"] = ["query"] + list(error["loc"])
-            raise HTTPException(422, detail=e.errors()) from None
+                error["loc"] = ["query", *list(error["loc"])]
+            raise HTTPException(422, detail=[format_exception(ex) for ex in e.errors()]) from None
 
     init_cls_and_handle_errors.__signature__ = signature(cls)
     return init_cls_and_handle_errors

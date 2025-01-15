@@ -35,13 +35,19 @@ jobs:
 
     # Steps
     steps:
+      - name: Install Task
+        uses: arduino/setup-task@v2
+        with:
+          version: 3.x
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Check out repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
-          python-version: "3.10"
+          python-version: "3.12"
 
       - name: Install Poetry
         uses: snok/install-poetry@v1
@@ -51,7 +57,7 @@ jobs:
 
       - name: Load cached venv
         id: cached-poetry-dependencies
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: .venv
           key: venv-${{ runner.os }}-${{ hashFiles('**/poetry.lock') }}
@@ -60,29 +66,29 @@ jobs:
         id: cache-validate
         if: steps.cached-poetry-dependencies.outputs.cache-hit == 'true'
         run: |
-          echo "import black;print('venv good?')" > test.py && poetry run python test.py && echo ::set-output name=cache-hit-success::true
+          echo "import fastapi;print('venv good?')" > test.py && poetry run python test.py && echo "cache-hit-success=true" >> $GITHUB_OUTPUT
           rm test.py
         continue-on-error: true
 
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install libsasl2-dev libldap2-dev libssl-dev tesseract-ocr-all
+          sudo apt-get install libsasl2-dev libldap2-dev libssl-dev
           poetry install
-          poetry add "psycopg2-binary==2.8.6"
+          poetry add "psycopg2-binary==2.9.9"
         if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true' || steps.cache-validate.outputs.cache-hit-success != 'true'
 
-      - name: Formatting (Black)
+      - name: Formatting (Ruff)
         run: |
-          poetry run black . --check
+          poetry run ruff format . --check
 
       - name: Lint (Ruff)
         run: |
-          make backend-lint
+          task py:lint
 
       - name: Mypy Typecheck
         run: |
-          make backend-typecheck
+          task py:mypy
 
       - name: Pytest
         env:
@@ -101,4 +107,4 @@ jobs:
           LDAP_NAME_ATTRIBUTE: cn
           LDAP_MAIL_ATTRIBUTE: mail
         run: |
-          make backend-test
+          task py:test

@@ -1,7 +1,7 @@
 <template>
   <div>
     <!-- Recipe Categories -->
-    <v-card v-if="recipe.recipeCategory.length > 0 || isEditForm" class="mt-2">
+    <v-card v-if="recipe.recipeCategory.length > 0 || isEditForm" :class="{'mt-10': !isEditForm}">
       <v-card-title class="py-2">
         {{ $t("recipe.categories") }}
       </v-card-title>
@@ -14,12 +14,12 @@
           :show-add="true"
           selector-type="categories"
         />
-        <RecipeChips v-else :items="recipe.recipeCategory" />
+        <RecipeChips v-else :items="recipe.recipeCategory" v-on="$listeners" />
       </v-card-text>
     </v-card>
 
     <!-- Recipe Tags -->
-    <v-card v-if="recipe.tags.length > 0 || isEditForm" class="mt-2">
+    <v-card v-if="recipe.tags.length > 0 || isEditForm" class="mt-4">
       <v-card-title class="py-2">
         {{ $t("tag.tags") }}
       </v-card-title>
@@ -32,7 +32,7 @@
           :show-add="true"
           selector-type="tags"
         />
-        <RecipeChips v-else :items="recipe.tags" url-prefix="tags" />
+        <RecipeChips v-else :items="recipe.tags" url-prefix="tags" v-on="$listeners" />
       </v-card-text>
     </v-card>
 
@@ -41,11 +41,11 @@
       <v-card-title class="py-2"> {{ $t('tool.required-tools') }} </v-card-title>
       <v-divider class="mx-2" />
       <v-card-text class="pt-0">
-        <RecipeOrganizerSelector v-model="recipe.tools" selector-type="tools" />
+        <RecipeOrganizerSelector v-model="recipe.tools" selector-type="tools" v-on="$listeners" />
       </v-card-text>
     </v-card>
 
-    <RecipeNutrition v-if="recipe.settings.showNutrition" v-model="recipe.nutrition" class="mt-10" :edit="isEditForm" />
+    <RecipeNutrition v-if="recipe.settings.showNutrition" v-model="recipe.nutrition" class="mt-4" :edit="isEditForm" />
     <RecipeAssets
       v-if="recipe.settings.showAssets"
       v-model="recipe.assets"
@@ -81,6 +81,8 @@ export default defineComponent({
   setup(props) {
     const { user } = usePageUser();
     const { isEditForm } = usePageState(props.recipe.slug);
+
+
 
     return {
       isEditForm,

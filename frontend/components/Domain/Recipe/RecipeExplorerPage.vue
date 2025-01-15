@@ -24,7 +24,7 @@
             :items="categories"
           >
             <v-icon left>
-              {{ $globals.icons.tags }}
+              {{ $globals.icons.categories }}
             </v-icon>
             {{ $t("category.categories") }}
           </SearchFilter>
@@ -40,7 +40,7 @@
           <!-- Tool Filter -->
           <SearchFilter v-if="tools" v-model="selectedTools" :require-all.sync="state.requireAllTools" :items="tools">
             <v-icon left>
-              {{ $globals.icons.tools }}
+              {{ $globals.icons.potSteam }}
             </v-icon>
             {{ $t("tool.tools") }}
           </SearchFilter>
@@ -51,6 +51,14 @@
               {{ $globals.icons.foods }}
             </v-icon>
             {{ $t("general.foods") }}
+          </SearchFilter>
+
+          <!-- Household Filter -->
+          <SearchFilter v-if="households.length > 1" v-model="selectedHouseholds" :items="households" radio>
+            <v-icon left>
+              {{ $globals.icons.household }}
+            </v-icon>
+            {{ $t("household.households") }}
           </SearchFilter>
 
           <!-- Sort Options -->
@@ -67,12 +75,16 @@
               <v-list>
                 <v-list-item @click="toggleOrderDirection()">
                   <v-icon left>
-                    {{ $globals.icons.sort }}
+                    {{
+                      state.orderDirection === "asc" ?
+                      $globals.icons.sortDescending : $globals.icons.sortAscending
+                    }}
                   </v-icon>
                   <v-list-item-title>
-                    {{ state.orderDirection === "asc" ? "Sort Descending" : "Sort Ascending" }}
+                    {{ state.orderDirection === "asc" ? $tc("general.sort-descending") : $tc("general.sort-ascending") }}
                   </v-list-item-title>
                 </v-list-item>
+                <v-divider />
                 <v-list-item
                   v-for="v in sortable"
                   :key="v.name"
@@ -120,12 +132,13 @@
     <v-divider></v-divider>
     <v-container class="mt-6 px-md-6">
       <RecipeCardSection
+        v-if="state.ready"
         class="mt-n5"
-        :icon="$globals.icons.search"
-        :title="$tc('search.results')"
-        :group-slug="groupSlug"
+        :icon="$globals.icons.silverwareForkKnife"
+        :title="$tc('general.recipes')"
         :recipes="recipes"
-        :query="passedQuery"
+        :query="passedQueryWithSeed"
+        @item-selected="filterItems"
         @replaceRecipes="replaceRecipes"
         @appendRecipes="appendRecipes"
       />
@@ -134,37 +147,40 @@
 </template>
 
 <script lang="ts">
-import { ref, defineComponent, useRouter, onMounted, useContext, computed, Ref } from "@nuxtjs/composition-api";
+import { ref, defineComponent, useRouter, onMounted, useContext, computed, Ref, useRoute, watch } from "@nuxtjs/composition-api";
 import { watchDebounced } from "@vueuse/shared";
 import SearchFilter from "~/components/Domain/SearchFilter.vue";
-import { useCategoryStore, useFoodStore, useTagStore, useToolStore } from "~/composables/store";
+import { useLoggedInState } from "~/composables/use-logged-in-state";
+import {
+  useCategoryStore,
+  usePublicCategoryStore,
+  useFoodStore,
+  usePublicFoodStore,
+  useHouseholdStore,
+  usePublicHouseholdStore,
+  useTagStore,
+  usePublicTagStore,
+  useToolStore,
+  usePublicToolStore,
+} from "~/composables/store";
+import { useUserSearchQuerySession } from "~/composables/use-users/preferences";
 import RecipeCardSection from "~/components/Domain/Recipe/RecipeCardSection.vue";
 import { IngredientFood, RecipeCategory, RecipeTag, RecipeTool } from "~/lib/api/types/recipe";
 import { NoUndefinedField } from "~/lib/api/types/non-generated";
 import { useLazyRecipes } from "~/composables/recipes";
 import { RecipeSearchQuery } from "~/lib/api/user/recipes/recipe";
-import { usePublicCategoryStore } from "~/composables/store/use-category-store";
-import { usePublicFoodStore } from "~/composables/store/use-food-store";
-import { usePublicTagStore } from "~/composables/store/use-tag-store";
-import { usePublicToolStore } from "~/composables/store/use-tool-store";
+import { HouseholdSummary } from "~/lib/api/types/household";
 
 export default defineComponent({
   components: { SearchFilter, RecipeCardSection },
-  props: {
-      groupSlug: {
-          type: String,
-          required: true,
-      },
-  },
-  setup(props) {
+  setup() {
     const router = useRouter();
     const { $auth, $globals, i18n } = useContext();
 
-    const loggedIn = computed(() => {
-      return $auth.loggedIn;
-    });
+    const { isOwnGroup } = useLoggedInState();
     const state = ref({
       auto: true,
+      ready: false,
       search: "",
       orderBy: "created_at",
       orderDirection: "desc" as "asc" | "desc",
@@ -176,39 +192,77 @@ export default defineComponent({
       requireAllFoods: false,
     });
 
-    const { recipes, appendRecipes, assignSorted, removeRecipe, replaceRecipes } = useLazyRecipes(loggedIn.value ? null : props.groupSlug);
-    const categories = loggedIn.value ? useCategoryStore() : usePublicCategoryStore(props.groupSlug);
+    const route = useRoute();
+    const groupSlug = computed(() => route.value.params.groupSlug || $auth.user?.groupSlug || "");
+    const searchQuerySession = useUserSearchQuerySession();
+
+    const { recipes, appendRecipes, assignSorted, removeRecipe, replaceRecipes } = useLazyRecipes(isOwnGroup.value ? null : groupSlug.value);
+    const categories = isOwnGroup.value ? useCategoryStore() : usePublicCategoryStore(groupSlug.value);
     const selectedCategories = ref<NoUndefinedField<RecipeCategory>[]>([]);
 
-    const foods = loggedIn.value ? useFoodStore() : usePublicFoodStore(props.groupSlug);
+    const foods = isOwnGroup.value ? useFoodStore() : usePublicFoodStore(groupSlug.value);
     const selectedFoods = ref<IngredientFood[]>([]);
 
-    const tags = loggedIn.value ? useTagStore() : usePublicTagStore(props.groupSlug);
+    const households = isOwnGroup.value ? useHouseholdStore() : usePublicHouseholdStore(groupSlug.value);
+    const selectedHouseholds = ref([] as NoUndefinedField<HouseholdSummary>[]);
+
+    const tags = isOwnGroup.value ? useTagStore() : usePublicTagStore(groupSlug.value);
     const selectedTags = ref<NoUndefinedField<RecipeTag>[]>([]);
 
-    const tools = loggedIn.value ? useToolStore() : usePublicToolStore(props.groupSlug);
+    const tools = isOwnGroup.value ? useToolStore() : usePublicToolStore(groupSlug.value);
     const selectedTools = ref<NoUndefinedField<RecipeTool>[]>([]);
 
-    const passedQuery = ref<RecipeSearchQuery | null>(null);
+    function calcPassedQuery(): RecipeSearchQuery {
+      return {
+        // the search clear button sets search to null, which still renders the query param for a moment,
+        // whereas an empty string is not rendered
+        search: state.value.search ? state.value.search : "",
+        categories: toIDArray(selectedCategories.value),
+        foods: toIDArray(selectedFoods.value),
+        households: toIDArray(selectedHouseholds.value),
+        tags: toIDArray(selectedTags.value),
+        tools: toIDArray(selectedTools.value),
+        requireAllCategories: state.value.requireAllCategories,
+        requireAllTags: state.value.requireAllTags,
+        requireAllTools: state.value.requireAllTools,
+        requireAllFoods: state.value.requireAllFoods,
+        orderBy: state.value.orderBy,
+        orderDirection: state.value.orderDirection,
+      };
+    }
+    const passedQuery = ref<RecipeSearchQuery>(calcPassedQuery());
+
+    // we calculate this separately because otherwise we can't check for query changes
+    const passedQueryWithSeed = computed(() => {
+      return {
+        ...passedQuery.value,
+        _searchSeed: Date.now().toString()
+      };
+    })
+
+    const queryDefaults = {
+      search: "",
+      orderBy: "created_at",
+      orderDirection: "desc" as "asc" | "desc",
+      requireAllCategories: false,
+      requireAllTags: false,
+      requireAllTools: false,
+      requireAllFoods: false,
+    }
 
     function reset() {
-      state.value.search = "";
-      state.value.orderBy = "created_at";
-      state.value.orderDirection = "desc";
-      state.value.requireAllCategories = false;
-      state.value.requireAllTags = false;
-      state.value.requireAllTools = false;
-      state.value.requireAllFoods = false;
+      state.value.search = queryDefaults.search;
+      state.value.orderBy = queryDefaults.orderBy;
+      state.value.orderDirection = queryDefaults.orderDirection;
+      state.value.requireAllCategories = queryDefaults.requireAllCategories;
+      state.value.requireAllTags = queryDefaults.requireAllTags;
+      state.value.requireAllTools = queryDefaults.requireAllTools;
+      state.value.requireAllFoods = queryDefaults.requireAllFoods;
       selectedCategories.value = [];
       selectedFoods.value = [];
+      selectedHouseholds.value = [];
       selectedTags.value = [];
       selectedTools.value = [];
-
-      router.push({
-        query: {},
-      });
-
-      search();
     }
 
     function toggleOrderDirection() {
@@ -216,7 +270,8 @@ export default defineComponent({
     }
 
     function toIDArray(array: { id: string }[]) {
-      return array.map((item) => item.id);
+      // we sort the array to make sure the query is always the same
+      return array.map((item) => item.id).sort();
     }
 
     function hideKeyboard() {
@@ -226,40 +281,34 @@ export default defineComponent({
     const input: Ref<any> = ref(null);
 
     async function search() {
-      await router.push({
-        query: {
-          categories: toIDArray(selectedCategories.value),
-          foods: toIDArray(selectedFoods.value),
-          tags: toIDArray(selectedTags.value),
-          tools: toIDArray(selectedTools.value),
-          // Only add the query param if it's or not default
-          ...{
-            auto: state.value.auto ? undefined : "false",
-            search: state.value.search === "" ? undefined : state.value.search,
-            orderBy: state.value.orderBy === "createdAt" ? undefined : state.value.orderBy,
-            orderDirection: state.value.orderDirection === "desc" ? undefined : state.value.orderDirection,
-            requireAllCategories: state.value.requireAllCategories ? "true" : undefined,
-            requireAllTags: state.value.requireAllTags ? "true" : undefined,
-            requireAllTools: state.value.requireAllTools ? "true" : undefined,
-            requireAllFoods: state.value.requireAllFoods ? "true" : undefined,
-          },
-        },
-      });
+      const oldQueryValueString = JSON.stringify(passedQuery.value);
+      const newQueryValue = calcPassedQuery();
+      const newQueryValueString = JSON.stringify(newQueryValue);
+      if (oldQueryValueString === newQueryValueString) {
+        return;
+      }
 
-      passedQuery.value = {
-        search: state.value.search,
-        categories: toIDArray(selectedCategories.value),
-        foods: toIDArray(selectedFoods.value),
-        tags: toIDArray(selectedTags.value),
-        tools: toIDArray(selectedTools.value),
-        requireAllCategories: state.value.requireAllCategories,
-        requireAllTags: state.value.requireAllTags,
-        requireAllTools: state.value.requireAllTools,
-        requireAllFoods: state.value.requireAllFoods,
-        orderBy: state.value.orderBy,
-        orderDirection: state.value.orderDirection,
-        _searchSeed: Date.now().toString()
-      };
+      passedQuery.value = newQueryValue;
+      const query = {
+        categories: passedQuery.value.categories,
+        foods: passedQuery.value.foods,
+        tags: passedQuery.value.tags,
+        tools: passedQuery.value.tools,
+        // Only add the query param if it's not the default value
+        ...{
+          auto: state.value.auto ? undefined : "false",
+          search: passedQuery.value.search === queryDefaults.search ? undefined : passedQuery.value.search,
+          orderBy: passedQuery.value.orderBy === queryDefaults.orderBy ? undefined : passedQuery.value.orderBy,
+          orderDirection: passedQuery.value.orderDirection === queryDefaults.orderDirection ? undefined : passedQuery.value.orderDirection,
+          households: !passedQuery.value.households?.length || passedQuery.value.households?.length === households.store.value.length ? undefined : passedQuery.value.households,
+          requireAllCategories: passedQuery.value.requireAllCategories ? "true" : undefined,
+          requireAllTags: passedQuery.value.requireAllTags ? "true" : undefined,
+          requireAllTools: passedQuery.value.requireAllTools ? "true" : undefined,
+          requireAllFoods: passedQuery.value.requireAllFoods ? "true" : undefined,
+        },
+      }
+      await router.push({ query });
+      searchQuerySession.value.recipe = JSON.stringify(query);
     }
 
     function waitUntilAndExecute(
@@ -321,7 +370,7 @@ export default defineComponent({
       {
         icon: $globals.icons.update,
         name: i18n.tc("general.updated"),
-        value: "update_at",
+        value: "updated_at",
       },
       {
         icon: $globals.icons.diceMultiple,
@@ -330,37 +379,84 @@ export default defineComponent({
       },
     ];
 
-    onMounted(() => {
-      // Hydrate Search
-      // wait for stores to be hydrated
+    watch(
+      () => route.value.query,
+      () => {
+        if (!Object.keys(route.value.query).length) {
+          reset();
+        }
+      }
+    )
 
-      // read query params
+    function filterItems(item: RecipeCategory | RecipeTag | RecipeTool, urlPrefix: string) {
+      if (urlPrefix === "categories") {
+        const result = categories.store.value.filter((category) => (category.id as string).includes(item.id as string));
+        selectedCategories.value = result as NoUndefinedField<RecipeTag>[];
+      } else if (urlPrefix === "tags") {
+        const result = tags.store.value.filter((tag) => (tag.id as string).includes(item.id as string));
+        selectedTags.value = result as NoUndefinedField<RecipeTag>[];
+      } else if (urlPrefix === "tools") {
+        const result = tools.store.value.filter((tool) => (tool.id ).includes(item.id || "" ));
+        selectedTags.value = result as NoUndefinedField<RecipeTag>[];
+      }
+    }
+
+    async function hydrateSearch() {
       const query = router.currentRoute.query;
-
-      if (query.auto) {
+      if (query.auto?.length) {
         state.value.auto = query.auto === "true";
       }
 
-      if (query.search) {
+      if (query.search?.length) {
         state.value.search = query.search as string;
+      } else {
+        state.value.search = queryDefaults.search;
       }
 
-      if (query.orderBy) {
+      if (query.orderBy?.length) {
         state.value.orderBy = query.orderBy as string;
+      } else {
+        state.value.orderBy = queryDefaults.orderBy;
       }
 
-      if (query.orderDirection) {
+      if (query.orderDirection?.length) {
         state.value.orderDirection = query.orderDirection as "asc" | "desc";
+      } else {
+        state.value.orderDirection = queryDefaults.orderDirection;
+      }
+
+      if (query.requireAllCategories?.length) {
+        state.value.requireAllCategories = query.requireAllCategories === "true";
+      } else {
+        state.value.requireAllCategories = queryDefaults.requireAllCategories;
+      }
+
+      if (query.requireAllTags?.length) {
+        state.value.requireAllTags = query.requireAllTags === "true";
+      } else {
+        state.value.requireAllTags = queryDefaults.requireAllTags;
+      }
+
+      if (query.requireAllTools?.length) {
+        state.value.requireAllTools = query.requireAllTools === "true";
+      } else {
+        state.value.requireAllTools = queryDefaults.requireAllTools;
+      }
+
+      if (query.requireAllFoods?.length) {
+        state.value.requireAllFoods = query.requireAllFoods === "true";
+      } else {
+        state.value.requireAllFoods = queryDefaults.requireAllFoods;
       }
 
       const promises: Promise<void>[] = [];
 
-      if (query.categories) {
+      if (query.categories?.length) {
         promises.push(
           waitUntilAndExecute(
-            () => categories.items.value.length > 0,
+            () => categories.store.value.length > 0,
             () => {
-              const result = categories.items.value.filter((item) =>
+              const result = categories.store.value.filter((item) =>
                 (query.categories as string[]).includes(item.id as string)
               );
 
@@ -368,52 +464,94 @@ export default defineComponent({
             }
           )
         );
+      } else {
+        selectedCategories.value = [];
       }
 
-      if (query.foods) {
+      if (query.tags?.length) {
         promises.push(
           waitUntilAndExecute(
+            () => tags.store.value.length > 0,
             () => {
-              if (foods.foods.value) {
-                return foods.foods.value.length > 0;
-              }
-              return false;
-            },
-            () => {
-              const result = foods.foods.value?.filter((item) => (query.foods as string[]).includes(item.id));
-              selectedFoods.value = result ?? [];
-            }
-          )
-        );
-      }
-
-      if (query.tags) {
-        promises.push(
-          waitUntilAndExecute(
-            () => tags.items.value.length > 0,
-            () => {
-              const result = tags.items.value.filter((item) => (query.tags as string[]).includes(item.id as string));
+              const result = tags.store.value.filter((item) => (query.tags as string[]).includes(item.id as string));
               selectedTags.value = result as NoUndefinedField<RecipeTag>[];
             }
           )
         );
+      } else {
+        selectedTags.value = [];
       }
 
-      if (query.tools) {
+      if (query.tools?.length) {
         promises.push(
           waitUntilAndExecute(
-            () => tools.items.value.length > 0,
+            () => tools.store.value.length > 0,
             () => {
-              const result = tools.items.value.filter((item) => (query.tools as string[]).includes(item.id));
+              const result = tools.store.value.filter((item) => (query.tools as string[]).includes(item.id));
               selectedTools.value = result as NoUndefinedField<RecipeTool>[];
             }
           )
         );
+      } else {
+        selectedTools.value = [];
       }
 
-      Promise.allSettled(promises).then(() => {
-        search();
-      });
+      if (query.foods?.length) {
+        promises.push(
+          waitUntilAndExecute(
+            () => {
+              if (foods.store.value) {
+                return foods.store.value.length > 0;
+              }
+              return false;
+            },
+            () => {
+              const result = foods.store.value?.filter((item) => (query.foods as string[]).includes(item.id));
+              selectedFoods.value = result ?? [];
+            }
+          )
+        );
+      } else {
+        selectedFoods.value = [];
+      }
+
+      if (query.households?.length) {
+        promises.push(
+          waitUntilAndExecute(
+            () => {
+              if (households.store.value) {
+                return households.store.value.length > 0;
+              }
+              return false;
+            },
+            () => {
+              const result = households.store.value?.filter((item) => (query.households as string[]).includes(item.id));
+              selectedHouseholds.value = result as NoUndefinedField<HouseholdSummary>[] ?? [];
+            }
+          )
+        );
+      } else {
+        selectedHouseholds.value = [];
+      }
+
+      await Promise.allSettled(promises);
+    };
+
+    onMounted(async () => {
+      // restore the user's last search query
+      if (searchQuerySession.value.recipe && !(Object.keys(route.value.query).length > 0)) {
+        try {
+          const query = JSON.parse(searchQuerySession.value.recipe);
+          await router.replace({ query });
+        } catch (error) {
+          searchQuerySession.value.recipe = "";
+          router.replace({ query: {} });
+        }
+      }
+
+      await hydrateSearch();
+      await search();
+      state.value.ready = true;
     });
 
     watchDebounced(
@@ -427,11 +565,12 @@ export default defineComponent({
         () => state.value.orderDirection,
         selectedCategories,
         selectedFoods,
+        selectedHouseholds,
         selectedTags,
         selectedTools,
       ],
       async () => {
-        if (state.value.auto) {
+        if (state.value.ready && state.value.auto) {
           await search();
         }
       },
@@ -445,10 +584,11 @@ export default defineComponent({
       search,
       reset,
       state,
-      categories: categories.items as unknown as NoUndefinedField<RecipeCategory>[],
-      tags: tags.items as unknown as NoUndefinedField<RecipeTag>[],
-      foods: foods.foods,
-      tools: tools.items as unknown as NoUndefinedField<RecipeTool>[],
+      categories: categories.store as unknown as NoUndefinedField<RecipeCategory>[],
+      tags: tags.store as unknown as NoUndefinedField<RecipeTag>[],
+      foods: foods.store,
+      tools: tools.store as unknown as NoUndefinedField<RecipeTool>[],
+      households: households.store as unknown as NoUndefinedField<HouseholdSummary>[],
 
       sortable,
       toggleOrderDirection,
@@ -457,6 +597,7 @@ export default defineComponent({
 
       selectedCategories,
       selectedFoods,
+      selectedHouseholds,
       selectedTags,
       selectedTools,
       appendRecipes,
@@ -464,7 +605,9 @@ export default defineComponent({
       recipes,
       removeRecipe,
       replaceRecipes,
-      passedQuery,
+      passedQueryWithSeed,
+
+      filterItems,
     };
   },
   head: {},

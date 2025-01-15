@@ -1,104 +1,109 @@
 <template>
-  <v-expand-transition>
-    <v-card
-      :ripple="false"
-      :class="isFlat ? 'mx-auto flat' : 'mx-auto'"
-      hover
-      :to="$listeners.selected ? undefined : recipeRoute"
-      @click="$emit('selected')"
-    >
-      <v-img v-if="vertical" class="rounded-sm">
-        <RecipeCardImage
-          :icon-size="100"
-          :height="150"
-          :slug="slug"
-          :recipe-id="recipeId"
-          small
-          :image-version="image"
-        />
-      </v-img>
-      <v-list-item three-line :class="vertical ? 'px-2' : 'px-0'">
-        <slot v-if="!vertical" name="avatar">
-          <v-list-item-avatar tile size="125" class="v-mobile-img rounded-sm my-0">
-            <RecipeCardImage
-              :icon-size="100"
-              :height="125"
-              :slug="slug"
-              :recipe-id="recipeId"
-              small
-              :image-version="image"
-            />
-          </v-list-item-avatar>
-        </slot>
-        <v-list-item-content class="py-0">
-          <v-list-item-title class="mt-3 mb-1">{{ name }} </v-list-item-title>
-          <v-list-item-subtitle>
-            <SafeMarkdown :source="description" />
-          </v-list-item-subtitle>
-          <div class="d-flex flex-wrap justify-end align-center">
-            <slot name="actions">
-              <RecipeFavoriteBadge v-if="loggedIn" :slug="slug" show-always />
-              <v-rating
-                color="secondary"
-                :class="loggedIn ? 'ml-auto' : 'ml-auto pb-2'"
-                background-color="secondary lighten-3"
-                dense
-                length="5"
-                size="15"
-                :value="rating"
-              ></v-rating>
-              <v-spacer></v-spacer>
-
-              <!-- If we're not logged-in, no items display, so we hide this menu -->
-              <!-- We also add padding to the v-rating above to compensate -->
-              <RecipeContextMenu
-                v-if="loggedIn"
+  <div :style="`height: ${height}`">
+    <v-expand-transition>
+      <v-card
+        :ripple="false"
+        :class="isFlat ? 'mx-auto flat' : 'mx-auto'"
+        :style="{ cursor }"
+        hover
+        :to="$listeners.selected ? undefined : recipeRoute"
+        @click="$emit('selected')"
+      >
+        <v-img v-if="vertical" class="rounded-sm">
+          <RecipeCardImage
+            :icon-size="100"
+            :height="height"
+            :slug="slug"
+            :recipe-id="recipeId"
+            small
+            :image-version="image"
+          />
+        </v-img>
+        <v-list-item three-line :class="vertical ? 'px-2' : 'px-0'">
+          <slot v-if="!vertical" name="avatar">
+            <v-list-item-avatar tile :height="height" width="125" class="v-mobile-img rounded-sm my-0">
+              <RecipeCardImage
+                :icon-size="100"
+                :height="height"
                 :slug="slug"
-                :menu-icon="$globals.icons.dotsHorizontal"
-                :name="name"
                 :recipe-id="recipeId"
-                :use-items="{
-                  delete: false,
-                  edit: true,
-                  download: true,
-                  mealplanner: true,
-                  shoppingList: true,
-                  print: false,
-                  printPreferences: false,
-                  share: true,
-                  publicUrl: false,
-                }"
-                @deleted="$emit('delete', slug)"
+                :image-version="image"
+                small
               />
-            </slot>
-          </div>
-        </v-list-item-content>
-      </v-list-item>
-      <slot />
-    </v-card>
-  </v-expand-transition>
+            </v-list-item-avatar>
+          </slot>
+          <v-list-item-content class="py-0">
+            <v-list-item-title class="mt-1 mb-1 text-top">{{ name }}</v-list-item-title>
+            <v-list-item-subtitle class="ma-0 text-top">
+              <SafeMarkdown :source="description" />
+            </v-list-item-subtitle>
+            <div class="d-flex flex-wrap justify-start ma-0">
+              <RecipeChips :truncate="true" :items="tags" :title="false" :limit="2" :small="true" url-prefix="tags" v-on="$listeners" />
+            </div>
+            <div class="d-flex flex-wrap justify-end align-center">
+              <slot name="actions">
+                <RecipeFavoriteBadge v-if="isOwnGroup && showRecipeContent" :recipe-id="recipeId" show-always />
+                <RecipeRating
+                  v-if="showRecipeContent"
+                  :class="isOwnGroup ? 'ml-auto' : 'ml-auto pb-2'"
+                  :value="rating"
+                  :recipe-id="recipeId"
+                  :slug="slug"
+                  :small="true"
+                />
+                <v-spacer></v-spacer>
+
+                <!-- If we're not logged-in, no items display, so we hide this menu -->
+                <!-- We also add padding to the v-rating above to compensate -->
+                <RecipeContextMenu
+                  v-if="isOwnGroup && showRecipeContent"
+                  :slug="slug"
+                  :menu-icon="$globals.icons.dotsHorizontal"
+                  :name="name"
+                  :recipe-id="recipeId"
+                  :use-items="{
+                    delete: false,
+                    edit: false,
+                    download: true,
+                    mealplanner: true,
+                    shoppingList: true,
+                    print: false,
+                    printPreferences: false,
+                    share: true,
+                  }"
+                  @deleted="$emit('delete', slug)"
+                />
+              </slot>
+            </div>
+          </v-list-item-content>
+        </v-list-item>
+        <slot />
+      </v-card>
+    </v-expand-transition>
+  </div>
 </template>
 
 <script lang="ts">
-import { computed, defineComponent, useContext } from "@nuxtjs/composition-api";
+import { computed, defineComponent, useContext, useRoute } from "@nuxtjs/composition-api";
 import RecipeFavoriteBadge from "./RecipeFavoriteBadge.vue";
 import RecipeContextMenu from "./RecipeContextMenu.vue";
 import RecipeCardImage from "./RecipeCardImage.vue";
+import RecipeRating from "./RecipeRating.vue";
+import RecipeChips from "./RecipeChips.vue";
+import { useLoggedInState } from "~/composables/use-logged-in-state";
 
 export default defineComponent({
   components: {
     RecipeFavoriteBadge,
     RecipeContextMenu,
+    RecipeRating,
     RecipeCardImage,
+    RecipeChips,
   },
   props: {
     name: {
       type: String,
       required: true,
-    },
-    groupSlug: {
-      type: String,
-      default: null,
     },
     slug: {
       type: String,
@@ -117,9 +122,9 @@ export default defineComponent({
       required: false,
       default: "abc123",
     },
-    route: {
-      type: Boolean,
-      default: true,
+    tags: {
+      type: Array,
+      default: () => [],
     },
     recipeId: {
       type: String,
@@ -133,20 +138,33 @@ export default defineComponent({
       type: Boolean,
       default: false,
     },
+    height: {
+      type: [Number, String],
+      default: 150,
+    },
+    imageHeight: {
+      type: [Number, String],
+      default: "fill-height",
+    },
   },
   setup(props) {
     const { $auth } = useContext();
-    const loggedIn = computed(() => {
-      return $auth.loggedIn;
-    });
+    const { isOwnGroup } = useLoggedInState();
 
+    const route = useRoute();
+    const groupSlug = computed(() => route.value.params.groupSlug || $auth.user?.groupSlug || "");
+    const showRecipeContent = computed(() => props.recipeId && props.slug);
     const recipeRoute = computed<string>(() => {
-      return loggedIn.value ? `/recipe/${props.slug}` : `/explore/recipes/${props.groupSlug}/${props.slug}`;
+      return showRecipeContent.value ? `/g/${groupSlug.value}/r/${props.slug}` : "";
     });
+    const cursor = computed(() => showRecipeContent.value ? "pointer" : "auto");
+
 
     return {
-      loggedIn,
+      isOwnGroup,
       recipeRoute,
+      showRecipeContent,
+      cursor,
     };
   },
 });
@@ -180,8 +198,8 @@ export default defineComponent({
   align-self: start !important;
 }
 
-.flat {
+.flat, .theme--dark .flat {
   box-shadow: none!important;
-  background-color: transparent;
+  background-color: transparent!important;
 }
 </style>

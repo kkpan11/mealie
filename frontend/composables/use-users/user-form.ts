@@ -38,7 +38,7 @@ export const useUserForm = () => {
       type: fieldTypes.SELECT,
       hint: i18n.tc("user.authentication-method-hint"),
       disableCreate: true,
-      options: [{ text: "Mealie" }, { text: "LDAP" }],
+      options: [{ text: "Mealie" }, { text: "LDAP" }, { text: "OIDC" }],
     },
     {
       section: i18n.tc("user.permissions"),
@@ -62,6 +62,12 @@ export const useUserForm = () => {
     {
       label: i18n.tc("user.user-can-organize-group-data"),
       varName: "canOrganize",
+      type: fieldTypes.BOOLEAN,
+      rules: ["required"],
+    },
+    {
+      label: i18n.tc("user.user-can-manage-household"),
+      varName: "canManageHousehold",
       type: fieldTypes.BOOLEAN,
       rules: ["required"],
     },

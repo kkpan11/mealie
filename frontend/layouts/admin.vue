@@ -34,7 +34,7 @@ import { SidebarLinks } from "~/types/application-types";
 
 export default defineComponent({
   components: { AppHeader, AppSidebar, TheSnackbar },
-  middleware: "auth",
+  middleware: ["auth", "admin-only"],
   auth: true,
   setup() {
     const { $globals, i18n, $vuetify } = useContext();
@@ -65,6 +65,12 @@ export default defineComponent({
         restricted: true,
       },
       {
+        icon: $globals.icons.household,
+        to: "/admin/manage/households",
+        title: i18n.tc("household.households"),
+        restricted: true,
+      },
+      {
         icon: $globals.icons.group,
         to: "/admin/manage/groups",
         title: i18n.tc("group.groups"),
@@ -86,16 +92,23 @@ export default defineComponent({
         restricted: true,
       },
       {
-        icon: $globals.icons.check,
-        to: "/admin/background-tasks",
-        title: i18n.tc("sidebar.background-tasks"),
+        icon: $globals.icons.robot,
+        title: i18n.tc("recipe.debug"),
         restricted: true,
-      },
-      {
-        icon: $globals.icons.slotMachine,
-        to: "/admin/parser",
-        title: i18n.tc("sidebar.parser"),
-        restricted: true,
+        children: [
+          {
+            icon: $globals.icons.robot,
+            to: "/admin/debug/openai",
+            title: i18n.tc("admin.openai"),
+            restricted: true,
+          },
+          {
+            icon: $globals.icons.slotMachine,
+            to: "/admin/debug/parser",
+            title: i18n.tc("sidebar.parser"),
+            restricted: true,
+          },
+        ]
       },
     ];
 

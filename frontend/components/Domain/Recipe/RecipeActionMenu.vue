@@ -21,38 +21,23 @@
 
     <v-spacer></v-spacer>
     <div v-if="!open" class="custom-btn-group ma-1">
-      <RecipeFavoriteBadge v-if="loggedIn" class="mx-1" color="info" button-style :slug="recipe.slug" show-always />
-      <RecipeTimelineBadge v-if="loggedIn" button-style :slug="recipe.slug" :recipe-name="recipe.name" />
+      <RecipeFavoriteBadge v-if="loggedIn" class="ml-1" color="info" button-style :recipe-id="recipe.id" show-always />
+      <RecipeTimelineBadge v-if="loggedIn" button-style class="ml-1" :slug="recipe.slug" :recipe-name="recipe.name" />
       <div v-if="loggedIn">
-        <v-tooltip v-if="!locked" bottom color="info">
+        <v-tooltip v-if="canEdit" bottom color="info">
           <template #activator="{ on, attrs }">
-            <v-btn fab small class="mx-1" color="info" v-bind="attrs" v-on="on" @click="$emit('edit', true)">
+            <v-btn fab small class="ml-1" color="info" v-bind="attrs" v-on="on" @click="$emit('edit', true)">
               <v-icon> {{ $globals.icons.edit }} </v-icon>
             </v-btn>
           </template>
           <span>{{ $t("general.edit") }}</span>
         </v-tooltip>
-        <v-tooltip v-else bottom color="info">
-          <template #activator="{ on, attrs }">
-            <v-btn fab small class="mx-1" color="info" v-bind="attrs" v-on="on">
-              <v-icon> {{ $globals.icons.lock }} </v-icon>
-            </v-btn>
-          </template>
-          <span> {{ $t("recipe.locked-by-owner") }} </span>
-        </v-tooltip>
       </div>
-
-      <RecipeTimerMenu
-        fab
-        color="info"
-        class="mr-1"
-      />
 
       <RecipeContextMenu
         show-print
         :menu-top="false"
         :name="recipe.name"
-        :group-id="recipe.groupId"
         :slug="recipe.slug"
         :menu-icon="$globals.icons.dotsVertical"
         fab
@@ -62,7 +47,6 @@
         :recipe-id="recipe.id"
         :recipe-scale="recipeScale"
         :use-items="{
-          delete: false,
           edit: false,
           download: loggedIn,
           duplicate: loggedIn,
@@ -71,8 +55,10 @@
           print: true,
           printPreferences: true,
           share: loggedIn,
-          publicUrl: recipe.settings && loggedIn ? recipe.settings.public : false,
+          recipeActions: true,
+          delete: loggedIn,
         }"
+        class="ml-1"
         @print="$emit('print')"
       />
     </div>
@@ -96,7 +82,6 @@
 import { defineComponent, ref, useContext } from "@nuxtjs/composition-api";
 import RecipeContextMenu from "./RecipeContextMenu.vue";
 import RecipeFavoriteBadge from "./RecipeFavoriteBadge.vue";
-import RecipeTimerMenu from "./RecipeTimerMenu.vue";
 import RecipeTimelineBadge from "./RecipeTimelineBadge.vue";
 import { Recipe } from "~/lib/api/types/recipe";
 
@@ -104,10 +89,9 @@ const SAVE_EVENT = "save";
 const DELETE_EVENT = "delete";
 const CLOSE_EVENT = "close";
 const JSON_EVENT = "json";
-const OCR_EVENT = "ocr";
 
 export default defineComponent({
-  components: { RecipeContextMenu, RecipeFavoriteBadge, RecipeTimerMenu, RecipeTimelineBadge },
+  components: { RecipeContextMenu, RecipeFavoriteBadge, RecipeTimelineBadge },
   props: {
     recipe: {
       required: true,
@@ -137,16 +121,12 @@ export default defineComponent({
       required: true,
       type: String,
     },
-    locked: {
-      type: Boolean,
-      default: false,
-    },
-    showOcrButton: {
+    canEdit: {
       type: Boolean,
       default: false,
     },
   },
-  setup(props, context) {
+  setup(_, context) {
     const deleteDialog = ref(false);
 
     const { i18n, $globals } = useContext();
@@ -176,15 +156,6 @@ export default defineComponent({
         color: "success",
       },
     ];
-
-    if (props.showOcrButton) {
-      editorButtons.splice(2, 0, {
-        text: i18n.t("ocr-editor.ocr-editor"),
-        icon: $globals.icons.eye,
-        event: OCR_EVENT,
-        color: "accent",
-      });
-    }
 
     function emitHandler(event: string) {
       switch (event) {

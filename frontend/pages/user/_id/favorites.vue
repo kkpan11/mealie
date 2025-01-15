@@ -1,31 +1,44 @@
 <template>
   <v-container>
-    <RecipeCardSection v-if="user" :icon="$globals.icons.heart" :title="$tc('user.user-favorites')" :recipes="user.favoriteRecipes">
-    </RecipeCardSection>
+    <RecipeCardSection
+      v-if="recipes && isOwnGroup"
+      :icon="$globals.icons.heart"
+      :title="$tc('user.user-favorites')"
+      :recipes="recipes"
+      :query="query"
+      @sortRecipes="assignSorted"
+      @replaceRecipes="replaceRecipes"
+      @appendRecipes="appendRecipes"
+      @delete="removeRecipe"
+    />
   </v-container>
 </template>
 
 <script lang="ts">
-import { defineComponent, useAsync, useRoute } from "@nuxtjs/composition-api";
+import { defineComponent, useRoute } from "@nuxtjs/composition-api";
 import RecipeCardSection from "~/components/Domain/Recipe/RecipeCardSection.vue";
-import { useUserApi } from "~/composables/api";
-import { useAsyncKey } from "~/composables/use-utils";
+import { useLazyRecipes } from "~/composables/recipes";
+import { useLoggedInState } from "~/composables/use-logged-in-state";
 
 export default defineComponent({
   components: { RecipeCardSection },
+  middleware: "auth",
   setup() {
-    const api = useUserApi();
     const route = useRoute();
+    const { isOwnGroup } = useLoggedInState();
 
     const userId = route.value.params.id;
-
-    const user = useAsync(async () => {
-      const { data } = await api.users.getFavorites(userId);
-      return data;
-    }, useAsyncKey());
+    const query = { queryFilter: `favoritedBy.id = "${userId}"` }
+    const { recipes, appendRecipes, assignSorted, removeRecipe, replaceRecipes } = useLazyRecipes();
 
     return {
-      user,
+      query,
+      recipes,
+      isOwnGroup,
+      appendRecipes,
+      assignSorted,
+      removeRecipe,
+      replaceRecipes,
     };
   },
   head() {

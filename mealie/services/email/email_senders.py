@@ -3,8 +3,15 @@ import typing
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from email import message
+from email.utils import formatdate
+from uuid import uuid4
+
+from html2text import html2text
 
 from mealie.services._base_service import BaseService
+
+SMTP_TIMEOUT = 10
+"""Timeout in seconds for SMTP connection"""
 
 
 @dataclass(slots=True)
@@ -36,16 +43,28 @@ class Message:
         msg["Subject"] = self.subject
         msg["From"] = f"{self.mail_from_name} <{self.mail_from_address}>"
         msg["To"] = to
+        msg["Date"] = formatdate(localtime=True)
+        msg.add_alternative(html2text(self.html), subtype="plain")
         msg.add_alternative(self.html, subtype="html")
 
+        try:
+            message_id = f"<{uuid4()}@{self.mail_from_address.split('@')[1]}>"
+        except IndexError:
+            # this should never happen with a valid email address,
+            # but we let the SMTP server handle it instead of raising it here
+            message_id = f"<{uuid4()}@{self.mail_from_address}>"
+
+        msg["Message-ID"] = message_id
+        msg["MIME-Version"] = "1.0"
+
         if smtp.ssl:
-            with smtplib.SMTP_SSL(smtp.host, smtp.port) as server:
+            with smtplib.SMTP_SSL(smtp.host, smtp.port, timeout=SMTP_TIMEOUT) as server:
                 if smtp.username and smtp.password:
                     server.login(smtp.username, smtp.password)
 
                 errors = server.send_message(msg)
         else:
-            with smtplib.SMTP(smtp.host, smtp.port) as server:
+            with smtplib.SMTP(smtp.host, smtp.port, timeout=SMTP_TIMEOUT) as server:
                 if smtp.tls:
                     server.starttls()
                 if smtp.username and smtp.password:
@@ -57,8 +76,7 @@ class Message:
 
 class ABCEmailSender(ABC):
     @abstractmethod
-    def send(self, email_to: str, subject: str, html: str) -> bool:
-        ...
+    def send(self, email_to: str, subject: str, html: str) -> bool: ...
 
 
 class DefaultEmailSender(ABCEmailSender, BaseService):

@@ -58,7 +58,7 @@
         </v-list>
       </v-menu>
       <ContextMenu
-        v-if="!$vuetify.breakpoint.xsOnly"
+        v-if="!$vuetify.breakpoint.smAndDown"
         :items="[
           {
             title: $tc('general.toggle-view'),
@@ -69,52 +69,56 @@
         @toggle-dense-view="toggleMobileCards()"
       />
     </v-app-bar>
-    <div v-if="recipes" class="mt-2">
-      <v-row v-if="!useMobileCards">
-        <v-col v-for="(recipe, index) in recipes" :key="recipe.slug + index" :sm="6" :md="6" :lg="4" :xl="3">
-          <v-lazy>
-            <RecipeCard
-              :name="recipe.name"
-              :description="recipe.description"
-              :group-slug="groupSlug"
-              :slug="recipe.slug"
-              :rating="recipe.rating"
-              :image="recipe.image"
-              :tags="recipe.tags"
-              :recipe-id="recipe.id"
-            />
-          </v-lazy>
-        </v-col>
-      </v-row>
-      <v-row v-else dense>
-        <v-col
-          v-for="recipe in recipes"
-          :key="recipe.name"
-          cols="12"
-          :sm="singleColumn ? '12' : '12'"
-          :md="singleColumn ? '12' : '6'"
-          :lg="singleColumn ? '12' : '4'"
-          :xl="singleColumn ? '12' : '3'"
-        >
-          <v-lazy>
-            <RecipeCardMobile
-              :name="recipe.name"
-              :description="recipe.description"
-              :group-slug="groupSlug"
-              :slug="recipe.slug"
-              :rating="recipe.rating"
-              :image="recipe.image"
-              :tags="recipe.tags"
-              :recipe-id="recipe.id"
-            />
-          </v-lazy>
-        </v-col>
-      </v-row>
+    <div v-if="recipes && ready">
+      <div class="mt-2">
+        <v-row v-if="!useMobileCards">
+          <v-col v-for="(recipe, index) in recipes" :key="recipe.slug + index" :sm="6" :md="6" :lg="4" :xl="3">
+            <v-lazy>
+              <RecipeCard
+                :name="recipe.name"
+                :description="recipe.description"
+                :slug="recipe.slug"
+                :rating="recipe.rating"
+                :image="recipe.image"
+                :tags="recipe.tags"
+                :recipe-id="recipe.id"
+
+                 v-on="$listeners"
+              />
+            </v-lazy>
+          </v-col>
+        </v-row>
+        <v-row v-else dense>
+          <v-col
+            v-for="recipe in recipes"
+            :key="recipe.name"
+            cols="12"
+            :sm="singleColumn ? '12' : '12'"
+            :md="singleColumn ? '12' : '6'"
+            :lg="singleColumn ? '12' : '4'"
+            :xl="singleColumn ? '12' : '3'"
+          >
+            <v-lazy>
+              <RecipeCardMobile
+                :name="recipe.name"
+                :description="recipe.description"
+                :slug="recipe.slug"
+                :rating="recipe.rating"
+                :image="recipe.image"
+                :tags="recipe.tags"
+                :recipe-id="recipe.id"
+
+                v-on="$listeners"
+              />
+            </v-lazy>
+          </v-col>
+        </v-row>
+      </div>
+      <v-card v-intersect="infiniteScroll"></v-card>
+      <v-fade-transition>
+        <AppLoader v-if="loading" :loading="loading" />
+      </v-fade-transition>
     </div>
-    <v-card v-intersect="infiniteScroll"></v-card>
-    <v-fade-transition>
-      <AppLoader v-if="loading" :loading="loading" />
-    </v-fade-transition>
   </div>
 </template>
 
@@ -128,12 +132,14 @@ import {
   toRefs,
   useAsync,
   useContext,
+  useRoute,
   useRouter,
   watch,
 } from "@nuxtjs/composition-api";
 import { useThrottleFn } from "@vueuse/core";
 import RecipeCard from "./RecipeCard.vue";
 import RecipeCardMobile from "./RecipeCardMobile.vue";
+import { useLoggedInState } from "~/composables/use-logged-in-state";
 import { useAsyncKey } from "~/composables/use-utils";
 import { useLazyRecipes } from "~/composables/recipes";
 import { Recipe } from "~/lib/api/types/recipe";
@@ -165,10 +171,6 @@ export default defineComponent({
       type: Boolean,
       default: false,
     },
-    groupSlug: {
-      type: String,
-      default: null,
-    },
     recipes: {
       type: Array as () => Recipe[],
       default: () => [],
@@ -191,9 +193,7 @@ export default defineComponent({
     };
 
     const { $auth, $globals, $vuetify } = useContext();
-    const loggedIn = computed(() => {
-      return $auth.loggedIn;
-    });
+    const { isOwnGroup } = useLoggedInState();
     const useMobileCards = computed(() => {
       return $vuetify.breakpoint.smAndDown || preferences.value.useMobileCards;
     });
@@ -206,15 +206,8 @@ export default defineComponent({
       sortLoading: false,
     });
 
-    const router = useRouter();
-    function navigateRandom() {
-      if (props.recipes.length > 0) {
-        const recipe = props.recipes[Math.floor(Math.random() * props.recipes.length)];
-        if (recipe.slug !== undefined) {
-          router.push(loggedIn.value ? `/recipe/${recipe.slug}` : `/explore/recipes/${props.groupSlug}/${recipe.slug}`);
-        }
-      }
-    }
+    const route = useRoute();
+    const groupSlug = computed(() => route.value.params.groupSlug || $auth.user?.groupSlug || "");
 
     const page = ref(1);
     const perPage = 32;
@@ -222,57 +215,73 @@ export default defineComponent({
     const ready = ref(false);
     const loading = ref(false);
 
-    const { fetchMore } = useLazyRecipes(loggedIn.value ? null : props.groupSlug);
+    const { fetchMore, getRandom } = useLazyRecipes(isOwnGroup.value ? null : groupSlug.value);
+    const router = useRouter();
 
     const queryFilter = computed(() => {
       const orderBy = props.query?.orderBy || preferences.value.orderBy;
-      return preferences.value.filterNull && orderBy ? `${orderBy} IS NOT NULL` : null;
+      const orderByFilter = preferences.value.filterNull && orderBy ? `${orderBy} IS NOT NULL` : null;
+
+      if (props.query.queryFilter && orderByFilter) {
+        return `(${props.query.queryFilter}) AND ${orderByFilter}`;
+      } else if (props.query.queryFilter) {
+        return props.query.queryFilter;
+      } else {
+        return orderByFilter;
+      }
     });
 
     async function fetchRecipes(pageCount = 1) {
       return await fetchMore(
         page.value,
-        // we double-up the first call to avoid a bug with large screens that render the entire first page without scrolling, preventing additional loading
         perPage * pageCount,
         props.query?.orderBy || preferences.value.orderBy,
         props.query?.orderDirection || preferences.value.orderDirection,
         props.query,
-        // filter out recipes that have a null value for the property we're sorting by
+        // we use a computed queryFilter to filter out recipes that have a null value for the property we're sorting by
         queryFilter.value
       );
     }
 
     onMounted(async () => {
-      if (props.query) {
-        const newRecipes = await fetchRecipes(2);
-
-        // since we doubled the first call, we also need to advance the page
-        page.value = page.value + 1;
-
-        context.emit(REPLACE_RECIPES_EVENT, newRecipes);
-        ready.value = true;
-      }
+      await initRecipes();
+      ready.value = true;
     });
 
+    let lastQuery: string | undefined = JSON.stringify(props.query);
     watch(
       () => props.query,
       async (newValue: RecipeSearchQuery | undefined) => {
-        if (newValue) {
-          page.value = 1;
-          const newRecipes = await fetchRecipes(2);
-
-          // since we doubled the first call, we also need to advance the page
-          page.value = page.value + 1;
-
-          context.emit(REPLACE_RECIPES_EVENT, newRecipes);
+        const newValueString = JSON.stringify(newValue)
+        if (lastQuery !== newValueString) {
+          lastQuery = newValueString;
+          ready.value = false;
+          await initRecipes();
           ready.value = true;
         }
       }
     );
 
+    async function initRecipes() {
+      page.value = 1;
+      hasMore.value = true;
+
+      // we double-up the first call to avoid a bug with large screens that render
+      // the entire first page without scrolling, preventing additional loading
+      const newRecipes = await fetchRecipes(page.value + 1);
+      if (newRecipes.length < perPage) {
+        hasMore.value = false;
+      }
+
+      // since we doubled the first call, we also need to advance the page
+      page.value = page.value + 1;
+
+      context.emit(REPLACE_RECIPES_EVENT, newRecipes);
+    }
+
     const infiniteScroll = useThrottleFn(() => {
       useAsync(async () => {
-        if (!ready.value || !hasMore.value || loading.value) {
+        if (!hasMore.value || loading.value) {
           return;
         }
 
@@ -280,15 +289,17 @@ export default defineComponent({
         page.value = page.value + 1;
 
         const newRecipes = await fetchRecipes();
-        if (!newRecipes.length) {
+        if (newRecipes.length < perPage) {
           hasMore.value = false;
-        } else {
+        }
+        if (newRecipes.length) {
           context.emit(APPEND_RECIPES_EVENT, newRecipes);
         }
 
         loading.value = false;
       }, useAsyncKey());
     }, 500);
+
 
     function sortRecipes(sortType: string) {
       if (state.sortLoading || loading.value) {
@@ -335,7 +346,7 @@ export default defineComponent({
           );
           break;
         case EVENTS.updated:
-          setter("update_at", $globals.icons.sortClockAscending, $globals.icons.sortClockDescending, "desc", false);
+          setter("updated_at", $globals.icons.sortClockAscending, $globals.icons.sortClockDescending, "desc", false);
           break;
         case EVENTS.lastMade:
           setter(
@@ -368,6 +379,15 @@ export default defineComponent({
       }, useAsyncKey());
     }
 
+    async function navigateRandom() {
+      const recipe = await getRandom(props.query, queryFilter.value);
+      if (!recipe?.slug) {
+        return;
+      }
+
+      router.push(`/g/${groupSlug.value}/r/${recipe.slug}`);
+    }
+
     function toggleMobileCards() {
       preferences.value.useMobileCards = !preferences.value.useMobileCards;
     }
@@ -377,6 +397,7 @@ export default defineComponent({
       displayTitleIcon,
       EVENTS,
       infiniteScroll,
+      ready,
       loading,
       navigateRandom,
       preferences,

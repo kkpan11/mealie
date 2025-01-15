@@ -1,15 +1,14 @@
-// TODO: Edit Group
 <template>
   <v-container fluid>
     <BaseDialog
       v-model="createDialog"
       :title="$t('group.create-group')"
       :icon="$globals.icons.group"
-      @submit="createGroup(createUserForm.data)"
+      @submit="createGroup(createGroupForm.data)"
     >
       <template #activator> </template>
       <v-card-text>
-        <AutoForm v-model="createUserForm.data" :update-mode="updateMode" :items="createUserForm.items" />
+        <AutoForm v-model="createGroupForm.data" :update-mode="updateMode" :items="createGroupForm.items" />
       </v-card-text>
     </BaseDialog>
 
@@ -27,7 +26,7 @@
 
     <BaseCardSectionTitle :title="$tc('group.group-management')"> </BaseCardSectionTitle>
     <section>
-      <v-toolbar flat color="background" class="justify-between">
+      <v-toolbar flat color="transparent" class="justify-between">
         <BaseButton @click="openDialog"> {{ $t("general.create") }} </BaseButton>
       </v-toolbar>
 
@@ -41,27 +40,34 @@
         :search="search"
         @click:row="handleRowClick"
       >
+        <template #item.households="{ item }">
+          {{ item.households.length }}
+        </template>
         <template #item.users="{ item }">
           {{ item.users.length }}
         </template>
-        <template #item.webhookEnable="{ item }">
-          {{ item.webhooks.length > 0 ? $t("general.yes") : $t("general.no") }}
-        </template>
         <template #item.actions="{ item }">
-          <v-btn
-            :disabled="item && item.users.length > 0"
-            class="mr-1"
-            icon
-            color="error"
-            @click.stop="
-              confirmDialog = true;
-              deleteTarget = item.id;
-            "
-          >
-            <v-icon>
-              {{ $globals.icons.delete }}
-            </v-icon>
-          </v-btn>
+          <v-tooltip bottom :disabled="!(item && (item.households.length > 0 || item.users.length > 0))">
+            <template #activator="{ on, attrs }">
+              <div v-bind="attrs" v-on="on" >
+                <v-btn
+                  :disabled="item && (item.households.length > 0 || item.users.length > 0)"
+                  class="mr-1"
+                  icon
+                  color="error"
+                  @click.stop="
+                    confirmDialog = true;
+                    deleteTarget = item.id;
+                  "
+                >
+                  <v-icon>
+                    {{ $globals.icons.delete }}
+                  </v-icon>
+                </v-btn>
+              </div>
+            </template>
+            <span>{{ $tc("admin.group-delete-note") }}</span>
+          </v-tooltip>
         </template>
       </v-data-table>
       <v-divider></v-divider>
@@ -94,12 +100,12 @@ export default defineComponent({
           value: "id",
         },
         { text: i18n.t("general.name"), value: "name" },
+        { text: i18n.t("group.total-households"), value: "households" },
         { text: i18n.t("user.total-users"), value: "users" },
-        { text: i18n.t("user.webhooks-enabled"), value: "webhookEnable" },
         { text: i18n.t("general.delete"), value: "actions" },
       ],
       updateMode: false,
-      createUserForm: {
+      createGroupForm: {
         items: [
           {
             label: i18n.t("group.group-name"),
@@ -116,7 +122,7 @@ export default defineComponent({
 
     function openDialog() {
       state.createDialog = true;
-      state.createUserForm.data.name = "";
+      state.createGroupForm.data.name = "";
     }
 
     const router = useRouter();

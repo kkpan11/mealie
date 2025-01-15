@@ -1,69 +1,27 @@
-import { ref, reactive, Ref } from "@nuxtjs/composition-api";
-import { usePublicStoreActions, useStoreActions } from "../partials/use-actions-factory";
-import { usePublicExploreApi } from "../api/api-client";
-import { useUserApi } from "~/composables/api";
+import { ref, Ref } from "@nuxtjs/composition-api";
+import { useData, useReadOnlyStore, useStore } from "../partials/use-store-factory";
 import { IngredientFood } from "~/lib/api/types/recipe";
+import { usePublicExploreApi, useUserApi } from "~/composables/api";
 
-let foodStore: Ref<IngredientFood[] | null> | null = null;
+const store: Ref<IngredientFood[]> = ref([]);
+const loading = ref(false);
+const publicLoading = ref(false);
 
-/**
- * useFoodData returns a template reactive object
- * for managing the creation of units. It also provides a
- * function to reset the data back to the initial state.
- */
 export const useFoodData = function () {
-  const data: IngredientFood = reactive({
+  return useData<IngredientFood>({
     id: "",
     name: "",
     description: "",
     labelId: undefined,
   });
-
-  function reset() {
-    data.id = "";
-    data.name = "";
-    data.description = "";
-    data.labelId = undefined;
-  }
-
-  return {
-    data,
-    reset,
-  };
-};
-
-export const usePublicFoodStore = function (groupSlug: string) {
-  const api = usePublicExploreApi(groupSlug).explore;
-  const loading = ref(false);
-
-  const actions = {
-    ...usePublicStoreActions(api.foods, foodStore, loading),
-    flushStore() {
-      foodStore = null;
-    },
-  };
-
-  if (!foodStore) {
-    foodStore = actions.getAll();
-  }
-
-  return { foods: foodStore, actions };
-};
+}
 
 export const useFoodStore = function () {
   const api = useUserApi();
-  const loading = ref(false);
+  return useStore<IngredientFood>(store, loading, api.foods);
+}
 
-  const actions = {
-    ...useStoreActions(api.foods, foodStore, loading),
-    flushStore() {
-      foodStore = null;
-    },
-  };
-
-  if (!foodStore) {
-    foodStore = actions.getAll();
-  }
-
-  return { foods: foodStore, actions };
-};
+export const usePublicFoodStore = function (groupSlug: string) {
+  const api = usePublicExploreApi(groupSlug).explore;
+  return useReadOnlyStore<IngredientFood>(store, publicLoading, api.foods);
+}

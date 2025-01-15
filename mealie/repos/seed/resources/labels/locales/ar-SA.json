@@ -1,65 +1,65 @@
 [
     {
-        "name": "Produce"
+        "name": "المنتج"
     },
     {
-        "name": "Grains"
+        "name": "الحبوب"
     },
     {
-        "name": "Fruits"
+        "name": "آلفواكه"
     },
     {
-        "name": "Vegetables"
+        "name": "الخضراوات"
     },
     {
-        "name": "Meat"
+        "name": "اللحوم"
     },
     {
-        "name": "Seafood"
+        "name": "المأكولات البحرية"
     },
     {
-        "name": "Beverages"
+        "name": "المشروبات"
     },
     {
-        "name": "Baked Goods"
+        "name": "المخبوزات"
     },
     {
-        "name": "Canned Goods"
+        "name": "المعلبات"
     },
     {
-        "name": "Condiments"
+        "name": "الباهرات"
     },
     {
-        "name": "Confectionary"
+        "name": "الحَلْوَيَات"
     },
     {
-        "name": "Dairy Products"
+        "name": "منتجات الألبان"
     },
     {
-        "name": "Frozen Foods"
+        "name": "الأطعمة المجمدة"
     },
     {
-        "name": "Health Foods"
+        "name": "الأغذية الصحية"
     },
     {
-        "name": "Household"
+        "name": "المنزل"
     },
     {
-        "name": "Meat Products"
+        "name": "منتجات اللحوم"
     },
     {
-        "name": "Snacks"
+        "name": "الوجبات الخفيفة"
     },
     {
-        "name": "Spices"
+        "name": "التوابل"
     },
     {
-        "name": "Sweets"
+        "name": "الحَلْوَيَات"
     },
     {
-        "name": "Alcohol"
+        "name": "الكحول"
     },
     {
-        "name": "Other"
+        "name": "أخرى"
     }
 ]

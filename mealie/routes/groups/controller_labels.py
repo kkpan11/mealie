@@ -17,14 +17,14 @@ from mealie.schema.labels.multi_purpose_label import MultiPurposeLabelPagination
 from mealie.schema.response.pagination import PaginationQuery
 from mealie.services.group_services.labels_service import MultiPurposeLabelService
 
-router = APIRouter(prefix="/groups/labels", tags=["Group: Multi Purpose Labels"], route_class=MealieCrudRoute)
+router = APIRouter(prefix="/groups/labels", tags=["Groups: Multi Purpose Labels"], route_class=MealieCrudRoute)
 
 
 @controller(router)
 class MultiPurposeLabelsController(BaseUserController):
     @cached_property
     def service(self):
-        return MultiPurposeLabelService(self.repos, self.group.id)
+        return MultiPurposeLabelService(self.repos)
 
     @cached_property
     def repo(self):
@@ -48,7 +48,7 @@ class MultiPurposeLabelsController(BaseUserController):
             search=search,
         )
 
-        response.set_pagination_guides(router.url_path_for("get_all"), q.dict())
+        response.set_pagination_guides(router.url_path_for("get_all"), q.model_dump())
         return response
 
     @router.post("", response_model=MultiPurposeLabelOut)

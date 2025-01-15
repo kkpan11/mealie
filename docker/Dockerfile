@@ -17,7 +17,7 @@ RUN yarn generate
 ###############################################
 # Base Image - Python
 ###############################################
-FROM python:3.10-slim as python-base
+FROM python:3.12-slim as python-base
 
 ENV MEALIE_HOME="/app"
 
@@ -50,10 +50,10 @@ RUN apt-get update \
     build-essential \
     libpq-dev \
     libwebp-dev \
-    tesseract-ocr-all \
     # LDAP Dependencies
     libsasl2-dev libldap2-dev libssl-dev \
     gnupg gnupg2 gnupg1 \
+    && rm -rf /var/lib/apt/lists/* \
     && pip install -U --no-cache-dir pip
 
 # install poetry - respects $POETRY_VERSION & $POETRY_HOME
@@ -78,6 +78,7 @@ RUN echo "crfpp-container"
 # Production Image
 ###############################################
 FROM python-base as production
+LABEL org.opencontainers.image.source="https://github.com/mealie-recipes/mealie"
 ENV PRODUCTION=true
 ENV TESTING=false
 
@@ -88,23 +89,12 @@ RUN apt-get update \
     && apt-get install --no-install-recommends -y \
     gosu \
     iproute2 \
-    tesseract-ocr-all \
-    curl \
-    gnupg \
     libldap-common \
-    && apt-get autoremove \
+    libldap-2.5 \
     && rm -rf /var/lib/apt/lists/*
 
-RUN curl -sL https://deb.nodesource.com/setup_16.x | bash - \
-    && apt-get install -y nodejs
-
-# Add Yarn
-RUN curl -sL https://dl.yarnpkg.com/debian/pubkey.gpg | gpg --dearmor | tee /usr/share/keyrings/yarnkey.gpg >/dev/null \
-    && echo "deb [signed-by=/usr/share/keyrings/yarnkey.gpg] https://dl.yarnpkg.com/debian stable main" | tee /etc/apt/sources.list.d/yarn.list \
-    && apt-get update && apt-get install yarn
-
-# Clean apt
-RUN apt-get autoremove && rm -rf /var/lib/apt/lists/*
+# create directory used for Docker Secrets
+RUN mkdir -p /run/secrets
 
 # copying poetry and venv into image
 COPY --from=builder-base $POETRY_HOME $POETRY_HOME
@@ -118,11 +108,6 @@ COPY --from=crfpp /usr/local/bin/crf_test /usr/local/bin/crf_test
 # copy backend
 COPY ./mealie $MEALIE_HOME/mealie
 COPY ./poetry.lock ./pyproject.toml $MEALIE_HOME/
-COPY ./gunicorn_conf.py $MEALIE_HOME
-
-# Alembic
-COPY ./alembic $MEALIE_HOME/alembic
-COPY ./alembic.ini $MEALIE_HOME/
 
 # venv already has runtime deps installed we get a quicker install
 WORKDIR $MEALIE_HOME
@@ -142,7 +127,6 @@ HEALTHCHECK CMD python $MEALIE_HOME/mealie/scripts/healthcheck.py || exit 1
 # ----------------------------------
 # Copy Frontend
 
-# copying caddy into image
 ENV STATIC_FILES=/spa/static
 COPY --from=builder /app/dist  ${STATIC_FILES}
 
@@ -152,4 +136,4 @@ EXPOSE ${APP_PORT}
 COPY ./docker/entry.sh $MEALIE_HOME/run.sh
 
 RUN chmod +x $MEALIE_HOME/run.sh
-ENTRYPOINT $MEALIE_HOME/run.sh
+ENTRYPOINT ["/app/run.sh"]

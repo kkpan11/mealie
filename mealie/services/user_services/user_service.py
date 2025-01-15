@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, datetime
 
 from mealie.repos.repository_factory import AllRepositories
 from mealie.schema.user.user import PrivateUser
@@ -23,14 +23,14 @@ class UserService(BaseService):
         unlocked = 0
 
         for user in locked_users:
-            if force or user.is_locked and user.locked_at is not None:
+            if force or not user.is_locked and user.locked_at is not None:
                 self.unlock_user(user)
                 unlocked += 1
 
         return unlocked
 
     def lock_user(self, user: PrivateUser) -> PrivateUser:
-        user.locked_at = datetime.now()
+        user.locked_at = datetime.now(UTC)
         return self.repos.users.update(user.id, user)
 
     def unlock_user(self, user: PrivateUser) -> PrivateUser:

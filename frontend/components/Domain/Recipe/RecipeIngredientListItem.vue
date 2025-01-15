@@ -10,8 +10,8 @@
   </div>
 </template>
 <script lang="ts">
-import { computed, defineComponent, toRefs } from "@nuxtjs/composition-api";
-import { RecipeIngredient } from "~/lib/api/types/group";
+import { computed, defineComponent } from "@nuxtjs/composition-api";
+import { RecipeIngredient } from "~/lib/api/types/household";
 import { useParsedIngredientText } from "~/composables/recipes";
 
 export default defineComponent({
@@ -45,6 +45,22 @@ export default defineComponent({
   .d-inline {
     & > p {
       display: inline;
+      &:has(>sub)>sup {
+        letter-spacing: -0.05rem;
+      }
+    }
+    &:has(sub) {
+      &:after {
+        letter-spacing: -0.2rem;
+      }
+    }
+    sup {
+      &+span{
+        letter-spacing: -0.05rem;
+      }
+      &:before {
+        letter-spacing: 0rem;
+      }
     }
   }
 
@@ -54,7 +70,7 @@ export default defineComponent({
 }
 
 .note {
-  line-height: 0.8em;
+  line-height: 1.25em;
   font-size: 0.8em;
   opacity: 0.7;
 }

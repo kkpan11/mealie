@@ -1,7 +1,7 @@
 <template>
   <section @keyup.ctrl.90="undoMerge">
     <!-- Ingredient Link Editor -->
-    <v-dialog v-model="dialog" width="600">
+    <v-dialog v-if="dialog" v-model="dialog" width="600">
       <v-card :ripple="false">
         <v-app-bar dark color="primary" class="mt-n1 mb-3">
           <v-icon large left>
@@ -49,18 +49,24 @@
         <v-card-actions>
           <BaseButton cancel @click="dialog = false"> </BaseButton>
           <v-spacer></v-spacer>
-          <BaseButton color="info" @click="autoSetReferences">
-            <template #icon> {{ $globals.icons.robot }}</template>
-            {{ $t("recipe.auto") }}
-          </BaseButton>
-          <BaseButton save @click="setIngredientIds"> </BaseButton>
+          <div class="d-flex flex-wrap justify-end">
+            <BaseButton class="my-1" color="info" @click="autoSetReferences">
+              <template #icon> {{ $globals.icons.robot }}</template>
+              {{ $t("recipe.auto") }}
+            </BaseButton>
+            <BaseButton class="ml-2 my-1" save @click="setIngredientIds"> </BaseButton>
+            <BaseButton v-if="availableNextStep" class="ml-2 my-1" @click="saveAndOpenNextLinkIngredients">
+              <template #icon> {{ $globals.icons.forward }}</template>
+              {{ $t("recipe.nextStep") }}
+            </BaseButton>
+          </div>
         </v-card-actions>
       </v-card>
     </v-dialog>
 
     <div class="d-flex justify-space-between justify-start">
-      <h2 class="mb-4 mt-1">{{ $t("recipe.instructions") }}</h2>
-      <BaseButton v-if="!isEditForm && showCookMode" minor cancel color="primary" @click="toggleCookMode()">
+      <h2 v-if="!isCookMode" class="mb-4 mt-1">{{ $t("recipe.instructions") }}</h2>
+      <BaseButton v-if="!isEditForm && !isCookMode" minor cancel color="primary" @click="toggleCookMode()">
         <template #icon>
           {{ $globals.icons.primary }}
         </template>
@@ -71,9 +77,11 @@
       :disabled="!isEditForm"
       :value="value"
       handle=".handle"
+      delay="250"
+      :delay-on-touch-only="true"
       v-bind="{
         animation: 200,
-        group: 'description',
+        group: 'recipe-instructions',
         ghostClass: 'ghost',
       }"
       @input="updateIndex"
@@ -84,7 +92,7 @@
         <div v-for="(step, index) in value" :key="step.id" class="list-group-item">
           <v-app-bar
             v-if="step.id && showTitleEditor[step.id]"
-            class="primary mx-1 mt-6"
+            class="primary mt-6"
             style="cursor: pointer"
             dark
             dense
@@ -108,16 +116,29 @@
           </v-app-bar>
           <v-hover v-slot="{ hover }">
             <v-card
-              class="ma-1"
+              class="my-3"
               :class="[{ 'on-hover': hover }, isChecked(index)]"
               :elevation="hover ? 12 : 2"
               :ripple="false"
               @click="toggleDisabled(index)"
             >
               <v-card-title :class="{ 'pb-0': !isChecked(index) }">
-                <span class="handle">
-                  <v-icon v-if="isEditForm" size="26" class="pb-1">{{ $globals.icons.arrowUpDown }}</v-icon>
-                  {{ $t("recipe.step-index", { step: index + 1 }) }}
+                <v-text-field
+                  v-if="isEditForm"
+                  v-model="step.summary"
+                  class="headline handle"
+                  hide-details
+                  dense
+                  solo
+                  flat
+                  :placeholder="$t('recipe.step-index', { step: index + 1 })"
+                >
+                  <template #prepend>
+                    <v-icon size="26">{{ $globals.icons.arrowUpDown }}</v-icon>
+                  </template>
+                </v-text-field>
+                <span v-else>
+                  {{ step.summary ? step.summary : $t("recipe.step-index", { step: index + 1 }) }}
                 </span>
                 <template v-if="isEditForm">
                   <div class="ml-auto">
@@ -143,10 +164,6 @@
                               event: 'link-ingredients',
                             },
                             {
-                              text: $tc('recipe.merge-above'),
-                              event: 'merge-above',
-                            },
-                            {
                               text: $tc('recipe.upload-image'),
                               event: 'upload-image'
                             },
@@ -154,11 +171,36 @@
                               icon: previewStates[index] ? $globals.icons.edit : $globals.icons.eye,
                               text: previewStates[index] ? $tc('recipe.edit-markdown') : $tc('markdown-editor.preview-markdown-button-label'),
                               event: 'preview-step',
+                              divider: true,
+                            },
+                            {
+                              text: $tc('recipe.merge-above'),
+                              event: 'merge-above',
+                            },
+                            {
+                              text: $tc('recipe.move-to-top'),
+                              event: 'move-to-top',
+                            },
+                            {
+                              text: $tc('recipe.move-to-bottom'),
+                              event: 'move-to-bottom',
+                            },
+                            {
+                              text: $tc('recipe.insert-above'),
+                              event: 'insert-above'
+                            },
+                            {
+                              text: $tc('recipe.insert-below'),
+                              event: 'insert-below'
                             },
                           ],
                         },
                       ]"
                       @merge-above="mergeAbove(index - 1, index)"
+                      @move-to-top="moveTo('top', index)"
+                      @move-to-bottom="moveTo('bottom', index)"
+                      @insert-above="insert(index)"
+                      @insert-below="insert(index+1)"
                       @toggle-section="toggleShowTitle(step.id)"
                       @link-ingredients="openDialog(index, step.text, step.ingredientReferences)"
                       @preview-step="togglePreviewState(index)"
@@ -201,16 +243,31 @@
               </DropZone>
               <v-expand-transition>
                 <div v-show="!isChecked(index) && !isEditForm" class="m-0 p-0">
+
                   <v-card-text class="markdown">
-                    <SafeMarkdown class="markdown" :source="step.text" />
-                    <div v-if="isCookMode && step.ingredientReferences && step.ingredientReferences.length > 0">
-                      <v-divider class="mb-2"></v-divider>
-                      <RecipeIngredientHtml
-                        v-for="ing in step.ingredientReferences"
-                        :key="ing.referenceId"
-                        :markup="getIngredientByRefId(ing.referenceId)"
-                      />
-                    </div>
+                    <v-row>
+                      <v-col
+                        v-if="isCookMode && step.ingredientReferences && step.ingredientReferences.length > 0"
+                        cols="12"
+                        sm="5"
+                      >
+                        <div class="ml-n4">
+                          <RecipeIngredients
+                            :value="recipe.recipeIngredient.filter((ing) => {
+                              if(!step.ingredientReferences) return false
+                              return step.ingredientReferences.map((ref) => ref.referenceId).includes(ing.referenceId || '')
+                            })"
+                            :scale="scale"
+                            :disable-amount="recipe.settings.disableAmount"
+                            :is-cook-mode="isCookMode"
+                          />
+                        </div>
+                      </v-col>
+                      <v-divider v-if="isCookMode && step.ingredientReferences && step.ingredientReferences.length > 0 && $vuetify.breakpoint.smAndUp" vertical ></v-divider>
+                      <v-col>
+                        <SafeMarkdown class="markdown" :source="step.text" />
+                      </v-col>
+                    </v-row>
                   </v-card-text>
                 </div>
               </v-expand-transition>
@@ -219,6 +276,7 @@
         </div>
       </TransitionGroup>
     </draggable>
+    <v-divider v-if="!isCookMode" class="mt-10 d-flex d-md-none"/>
   </section>
 </template>
 
@@ -233,6 +291,7 @@ import {
   onMounted,
   useContext,
   computed,
+  nextTick,
 } from "@nuxtjs/composition-api";
 import RecipeIngredientHtml from "../../RecipeIngredientHtml.vue";
 import { RecipeStep, IngredientReferences, RecipeIngredient, RecipeAsset, Recipe } from "~/lib/api/types/recipe";
@@ -243,7 +302,7 @@ import { usePageState } from "~/composables/recipe-page/shared-state";
 import { useExtractIngredientReferences } from "~/composables/recipe-page/use-extract-ingredient-references";
 import { NoUndefinedField } from "~/lib/api/types/non-generated";
 import DropZone from "~/components/global/DropZone.vue";
-
+import RecipeIngredients from "~/components/Domain/Recipe/RecipeIngredients.vue";
 interface MergerHistory {
   target: number;
   source: number;
@@ -256,6 +315,7 @@ export default defineComponent({
     draggable,
     RecipeIngredientHtml,
     DropZone,
+    RecipeIngredients
   },
   props: {
     value: {
@@ -310,7 +370,7 @@ export default defineComponent({
     // ===============================================================
     // UI State Helpers
 
-    function validateTitle(title: string | undefined) {
+    function hasSectionTitle(title: string | undefined) {
       return !(title === null || title === "" || title === undefined);
     }
 
@@ -319,7 +379,7 @@ export default defineComponent({
 
       v.forEach((element: RecipeStep) => {
         if (element.id !== undefined) {
-          showTitleEditor.value[element.id] = validateTitle(element.title);
+          showTitleEditor.value[element.id] = hasSectionTitle(element.title);
         }
       });
     });
@@ -330,7 +390,7 @@ export default defineComponent({
     onMounted(() => {
       props.value.forEach((element: RecipeStep) => {
         if (element.id !== undefined) {
-          showTitleEditor.value[element.id] = validateTitle(element.title);
+          showTitleEditor.value[element.id] = hasSectionTitle(element.title);
         }
 
         // showCookMode.value = false;
@@ -396,6 +456,8 @@ export default defineComponent({
       activeRefs.value = refs.map((ref) => ref.referenceId ?? "");
     }
 
+    const availableNextStep = computed(() => activeIndex.value < props.value.length - 1);
+
     function setIngredientIds() {
       const instruction = props.value[activeIndex.value];
       instruction.ingredientReferences = activeRefs.value.map((ref) => {
@@ -412,6 +474,20 @@ export default defineComponent({
         }
       });
       state.dialog = false;
+    }
+
+    function saveAndOpenNextLinkIngredients() {
+      const currentStepIndex = activeIndex.value;
+
+      if(!availableNextStep.value) {
+        return; // no next step, the button calling this function should not be shown
+      }
+
+      setIngredientIds();
+      const nextStep = props.value[currentStepIndex + 1];
+      // close dialog before opening to reset the scroll position
+      nextTick(() => openDialog(currentStepIndex + 1, nextStep.text, nextStep.ingredientReferences));
+
     }
 
     function setUsedIngredients() {
@@ -507,6 +583,18 @@ export default defineComponent({
       }
     }
 
+    function moveTo(dest: string, source: number) {
+      if (dest === "top") {
+        props.value.unshift(props.value.splice(source, 1)[0]);
+      } else {
+        props.value.push(props.value.splice(source, 1)[0]);
+      }
+    }
+
+    function insert(dest: number) {
+      props.value.splice(dest, 0, { id: uuid4(), text: "", title: "", ingredientReferences: [] });
+    }
+
     const previewStates = ref<boolean[]>([]);
 
     function togglePreviewState(index: number) {
@@ -519,7 +607,7 @@ export default defineComponent({
       const sectionSteps: number[] = [];
 
       for (let i = index; i < props.value.length; i++) {
-        if (!(i === index) && validateTitle(props.value[i].title)) {
+        if (!(i === index) && hasSectionTitle(props.value[i].title)) {
           break;
         } else {
           sectionSteps.push(i);
@@ -622,8 +710,11 @@ export default defineComponent({
       getIngredientByRefId,
       showTitleEditor,
       mergeAbove,
+      moveTo,
       openDialog,
       setIngredientIds,
+      availableNextStep,
+      saveAndOpenNextLinkIngredients,
       undoMerge,
       toggleDisabled,
       isChecked,
@@ -635,6 +726,7 @@ export default defineComponent({
       showCookMode,
       isCookMode,
       isEditForm,
+      insert,
     };
   },
 });
@@ -667,9 +759,6 @@ export default defineComponent({
 }
 .list-group {
   min-height: 38px;
-}
-.list-group-item {
-  cursor: move;
 }
 .list-group-item i {
   cursor: pointer;

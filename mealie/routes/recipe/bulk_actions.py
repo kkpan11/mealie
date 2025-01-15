@@ -1,9 +1,9 @@
 from functools import cached_property
 from pathlib import Path
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, HTTPException
 
-from mealie.core.dependencies.dependencies import temporary_zip_path
+from mealie.core.dependencies.dependencies import get_temporary_zip_path
 from mealie.core.security import create_file_token
 from mealie.routes._base import BaseUserController, controller
 from mealie.schema.group.group_exports import GroupDataExport
@@ -17,7 +17,7 @@ from mealie.schema.recipe.recipe_bulk_actions import (
 from mealie.schema.response.responses import SuccessResponse
 from mealie.services.recipe.recipe_bulk_service import RecipeBulkActionsService
 
-router = APIRouter(prefix="/bulk-actions", tags=["Recipe: Bulk Actions"])
+router = APIRouter(prefix="/bulk-actions")
 
 
 @controller(router)
@@ -44,12 +44,17 @@ class RecipeBulkActionsController(BaseUserController):
         self.service.delete_recipes(delete_recipes.recipes)
 
     @router.post("/export", status_code=202)
-    def bulk_export_recipes(self, export_recipes: ExportRecipes, temp_path=Depends(temporary_zip_path)):
-        self.service.export_recipes(temp_path, export_recipes.recipes)
+    def bulk_export_recipes(self, export_recipes: ExportRecipes):
+        with get_temporary_zip_path() as temp_path:
+            self.service.export_recipes(temp_path, export_recipes.recipes)
 
     @router.get("/export/download")
     def get_exported_data_token(self, path: Path):
         """Returns a token to download a file"""
+        path = Path(path).resolve()
+
+        if not path.is_relative_to(self.folders.DATA_DIR):
+            raise HTTPException(400, "path must be relative to data directory")
 
         return {"fileToken": create_file_token(path)}
 

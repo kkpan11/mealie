@@ -92,10 +92,8 @@ class TandoorMigrator(BaseMigrator):
             recipe_data.pop("working_time", 0), recipe_data.pop("waiting_time", 0)
         )
 
-        serving_size = recipe_data.pop("servings", 0)
-        serving_text = recipe_data.pop("servings_text", "")
-        if serving_size and serving_text:
-            recipe_data["recipeYield"] = f"{serving_size} {serving_text}"
+        recipe_data["recipeYieldQuantity"] = recipe_data.pop("servings", 0)
+        recipe_data["recipeYield"] = recipe_data.pop("servings_text", "")
 
         try:
             recipe_image_path = next(source_dir.glob("image.*"))
@@ -109,12 +107,12 @@ class TandoorMigrator(BaseMigrator):
             with zipfile.ZipFile(self.archive) as zip_file:
                 zip_file.extractall(tmpdir)
 
-            source_dir = Path(tmpdir)
+            source_dir = self.get_zip_base_path(Path(tmpdir))
 
             recipes_as_dicts: list[dict] = []
             for i, recipe_zip_file in enumerate(source_dir.glob("*.zip")):
                 try:
-                    recipe_dir = str(source_dir.joinpath(f"recipe_{i+1}"))
+                    recipe_dir = str(source_dir.joinpath(f"recipe_{i + 1}"))
                     os.makedirs(recipe_dir)
 
                     with zipfile.ZipFile(recipe_zip_file) as recipe_zip:

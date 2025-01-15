@@ -15,7 +15,7 @@ router = UserAPIRouter(prefix="/shared/recipes", tags=["Shared: Recipes"])
 class RecipeSharedController(BaseUserController):
     @cached_property
     def repo(self):
-        return self.repos.recipe_share_tokens.by_group(self.group_id)
+        return self.repos.recipe_share_tokens
 
     @cached_property
     def mixins(self):
@@ -30,7 +30,7 @@ class RecipeSharedController(BaseUserController):
 
     @router.post("", response_model=RecipeShareToken, status_code=201)
     def create_one(self, data: RecipeShareTokenCreate) -> RecipeShareToken:
-        save_data = RecipeShareTokenSave(**data.dict(), group_id=self.group_id)
+        save_data = RecipeShareTokenSave(**data.model_dump(), group_id=self.group_id)
         return self.mixins.create_one(save_data)
 
     @router.get("/{item_id}", response_model=RecipeShareToken)

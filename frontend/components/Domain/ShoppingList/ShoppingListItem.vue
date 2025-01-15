@@ -35,7 +35,7 @@
                 content-class="text-caption"
               >
                 <template #activator="{ on: onBtn, attrs: attrsBtn }">
-                  <v-btn small class="ml-2" icon @click="displayRecipeRefs = !displayRecipeRefs" v-bind="attrsBtn" v-on="onBtn">
+                  <v-btn small class="ml-2" icon v-bind="attrsBtn" v-on="onBtn" @click="displayRecipeRefs = !displayRecipeRefs">
                     <v-icon>
                       {{ $globals.icons.potSteam }}
                     </v-icon>
@@ -69,13 +69,13 @@
     </v-row>
     <v-row v-if="!listItem.checked && recipeList && recipeList.length && displayRecipeRefs" no-gutters class="mb-2">
       <v-col cols="auto" style="width: 100%;">
-        <RecipeList :recipes="recipeList" :list-item="listItem" small tile />
+        <RecipeList :recipes="recipeList" :list-item="listItem" :disabled="$nuxt.isOffline" small tile />
       </v-col>
     </v-row>
     <v-row v-if="listItem.checked" no-gutters class="mb-2">
       <v-col cols="auto">
         <div class="text-caption font-weight-light font-italic">
-          {{ $t("shopping-list.completed-on", {date: new Date(listItem.updateAt+"Z").toLocaleDateString($i18n.locale)}) }}
+          {{ $t("shopping-list.completed-on", {date: new Date(listItem.updatedAt || "").toLocaleDateString($i18n.locale)}) }}
         </div>
       </v-col>
     </v-row>
@@ -99,7 +99,7 @@ import { defineComponent, computed, ref, useContext } from "@nuxtjs/composition-
 import RecipeIngredientListItem from "../Recipe/RecipeIngredientListItem.vue";
 import ShoppingListItemEditor from "./ShoppingListItemEditor.vue";
 import MultiPurposeLabel from "./MultiPurposeLabel.vue";
-import { ShoppingListItemOut } from "~/lib/api/types/group";
+import { ShoppingListItemOut } from "~/lib/api/types/household";
 import { MultiPurposeLabelOut, MultiPurposeLabelSummary } from "~/lib/api/types/labels";
 import { IngredientFood, IngredientUnit, RecipeSummary } from "~/lib/api/types/recipe";
 import RecipeList from "~/components/Domain/Recipe/RecipeList.vue";
@@ -135,7 +135,7 @@ export default defineComponent({
     recipes: {
       type: Map<string, RecipeSummary>,
       default: undefined,
-    }
+    },
   },
   setup(props, context) {
     const { i18n } = useContext();
@@ -150,10 +150,6 @@ export default defineComponent({
       {
         text: i18n.t("general.delete") as string,
         event: "delete",
-      },
-      {
-        text: i18n.t("general.transfer") as string,
-        event: "transfer",
       },
     ];
 

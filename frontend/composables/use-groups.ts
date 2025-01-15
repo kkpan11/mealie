@@ -1,30 +1,39 @@
 import { useAsync, ref } from "@nuxtjs/composition-api";
-import { useAsyncKey } from "./use-utils";
 import { useUserApi } from "~/composables/api";
-import { GroupBase } from "~/lib/api/types/user";
+import { GroupBase, GroupSummary } from "~/lib/api/types/user";
+
+const groupSelfRef = ref<GroupSummary | null>(null);
+const loading = ref(false);
 
 export const useGroupSelf = function () {
   const api = useUserApi();
+  async function refreshGroupSelf() {
+    loading.value = true;
+    const { data } = await api.groups.getCurrentUserGroup();
+    groupSelfRef.value = data;
+    loading.value = false;
+  }
 
   const actions = {
     get() {
-      const group = useAsync(async () => {
-        const { data } = await api.groups.getCurrentUserGroup();
+      if (!(groupSelfRef.value || loading.value)) {
+        refreshGroupSelf();
+      }
 
-        return data;
-      }, useAsyncKey());
-
-      return group;
+      return groupSelfRef;
     },
     async updatePreferences() {
-      if (!group.value?.preferences) {
+      if (!groupSelfRef.value) {
+        await refreshGroupSelf();
+      }
+      if (!groupSelfRef.value?.preferences) {
         return;
       }
 
-      const { data } = await api.groups.setPreferences(group.value.preferences);
+      const { data } = await api.groups.setPreferences(groupSelfRef.value.preferences);
 
       if (data) {
-        group.value.preferences = data;
+        groupSelfRef.value.preferences = data;
       }
     },
   };
@@ -42,7 +51,7 @@ export const useGroups = function () {
     loading.value = true;
     const asyncKey = String(Date.now());
     const groups = useAsync(async () => {
-      const { data } = await api.groups.getAll();
+      const { data } = await api.groups.getAll(1, -1, {orderBy: "name", orderDirection: "asc"});;
 
       if (data) {
         return data.items;
@@ -57,7 +66,7 @@ export const useGroups = function () {
 
   async function refreshAllGroups() {
     loading.value = true;
-    const { data } = await api.groups.getAll();
+    const { data } = await api.groups.getAll(1, -1, {orderBy: "name", orderDirection: "asc"});;
 
     if (data) {
       groups.value = data.items;

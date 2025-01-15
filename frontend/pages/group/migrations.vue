@@ -31,7 +31,7 @@
         <v-card-title class="mt-0"> {{ $t('general.upload-file') }} </v-card-title>
         <v-card-text>
           <AppButtonUpload
-            accept=".zip"
+            :accept="content.acceptedFileType || '.zip'"
             class="mb-2"
             :post="false"
             file-name="file"
@@ -75,15 +75,19 @@ import { useUserApi } from "~/composables/api";
 import { SupportedMigrations } from "~/lib/api/types/group";
 
 const MIGRATIONS = {
-  nextcloud: "nextcloud",
+  mealie: "mealie_alpha",
   chowdown: "chowdown",
   copymethat: "copymethat",
+  myrecipebox: "myrecipebox",
+  nextcloud: "nextcloud",
   paprika: "paprika",
-  mealie: "mealie_alpha",
+  plantoeat: "plantoeat",
+  recipekeeper: "recipekeeper",
   tandoor: "tandoor",
 };
 
 export default defineComponent({
+  middleware: ["auth", "advanced-only"],
   setup() {
     const { $globals, i18n } = useContext();
 
@@ -93,15 +97,16 @@ export default defineComponent({
       addMigrationTag: false,
       loading: false,
       treeState: true,
-      migrationType: MIGRATIONS.nextcloud as SupportedMigrations,
+      migrationType: MIGRATIONS.mealie as SupportedMigrations,
       fileObject: {} as File,
       reports: [] as ReportSummary[],
     });
 
     const items: MenuItem[] = [
       {
-        text: i18n.tc("migration.nextcloud.title"),
-        value: MIGRATIONS.nextcloud,
+        text: i18n.tc("migration.mealie-pre-v1.title"),
+        value: MIGRATIONS.mealie,
+        divider: true,
       },
       {
         text: i18n.tc("migration.chowdown.title"),
@@ -112,113 +117,34 @@ export default defineComponent({
         value: MIGRATIONS.copymethat,
       },
       {
+        text: i18n.tc("migration.myrecipebox.title"),
+        value: MIGRATIONS.myrecipebox,
+      },
+      {
+        text: i18n.tc("migration.nextcloud.title"),
+        value: MIGRATIONS.nextcloud,
+      },
+      {
         text: i18n.tc("migration.paprika.title"),
         value: MIGRATIONS.paprika,
       },
       {
-        text: i18n.tc("migration.mealie-pre-v1.title"),
-        value: MIGRATIONS.mealie,
+        text: i18n.tc("migration.plantoeat.title"),
+        value: MIGRATIONS.plantoeat,
+      },
+      {
+        text: i18n.tc("migration.recipekeeper.title"),
+        value: MIGRATIONS.recipekeeper,
       },
       {
         text: i18n.tc("migration.tandoor.title"),
         value: MIGRATIONS.tandoor,
       },
     ];
-
     const _content = {
-      [MIGRATIONS.nextcloud]: {
-        text: i18n.tc("migration.nextcloud.description-long"),
-        tree: [
-          {
-            id: 1,
-            icon: $globals.icons.zip,
-            name: "nextcloud.zip",
-            children: [
-              {
-                id: 2,
-                name: i18n.t("migration.recipe-1"),
-                icon: $globals.icons.folderOutline,
-                children: [
-                  { id: 3, name: "recipe.json", icon: $globals.icons.codeJson },
-                  { id: 4, name: "full.jpg", icon: $globals.icons.fileImage },
-                  { id: 5, name: "thumb.jpg", icon: $globals.icons.fileImage },
-                ],
-              },
-              {
-                id: 6,
-                name: i18n.t("migration.recipe-2"),
-                icon: $globals.icons.folderOutline,
-                children: [
-                  { id: 7, name: "recipe.json", icon: $globals.icons.codeJson },
-                  { id: 8, name: "full.jpg", icon: $globals.icons.fileImage },
-                  { id: 9, name: "thumb.jpg", icon: $globals.icons.fileImage },
-                ],
-              },
-            ],
-          },
-        ],
-      },
-      [MIGRATIONS.chowdown]: {
-        text: i18n.tc("migration.chowdown.description-long"),
-        tree: [
-          {
-            id: 1,
-            icon: $globals.icons.zip,
-            name: "nextcloud.zip",
-            children: [
-              {
-                id: 2,
-                name: i18n.t("migration.recipe-1"),
-                icon: $globals.icons.folderOutline,
-                children: [
-                  { id: 3, name: "recipe.json", icon: $globals.icons.codeJson },
-                  { id: 4, name: "full.jpg", icon: $globals.icons.fileImage },
-                  { id: 5, name: "thumb.jpg", icon: $globals.icons.fileImage },
-                ],
-              },
-              {
-                id: 6,
-                name: i18n.t("migration.recipe-2"),
-                icon: $globals.icons.folderOutline,
-                children: [
-                  { id: 7, name: "recipe.json", icon: $globals.icons.codeJson },
-                  { id: 8, name: "full.jpg", icon: $globals.icons.fileImage },
-                  { id: 9, name: "thumb.jpg", icon: $globals.icons.fileImage },
-                ],
-              },
-            ],
-          },
-        ],
-      },
-      [MIGRATIONS.copymethat]: {
-        text: i18n.tc("migration.copymethat.description-long"),
-        tree: [
-          {
-            id: 1,
-            icon: $globals.icons.zip,
-            name: "Copy_Me_That_20230306.zip",
-            children: [
-              {
-                id: 2,
-                name: "images",
-                icon: $globals.icons.folderOutline,
-                children: [
-                  { id: 3, name: "recipe_1_an5zy.jpg", icon: $globals.icons.fileImage },
-                  { id: 4, name: "recipe_2_82el8.jpg", icon: $globals.icons.fileImage },
-                  { id: 5, name: "recipe_3_j75qg.jpg", icon: $globals.icons.fileImage },
-                ],
-              },
-              { id: 6, name: "recipes.html", icon: $globals.icons.codeJson }
-            ]
-          }
-        ],
-      },
-      [MIGRATIONS.paprika]: {
-        text: i18n.tc("migration.paprika.description-long"),
-        tree: false,
-      },
       [MIGRATIONS.mealie]: {
         text: i18n.tc("migration.mealie-pre-v1.description-long"),
+        acceptedFileType: ".zip",
         tree: [
           {
             id: 1,
@@ -272,8 +198,143 @@ export default defineComponent({
           },
         ],
       },
+      [MIGRATIONS.chowdown]: {
+        text: i18n.tc("migration.chowdown.description-long"),
+        acceptedFileType: ".zip",
+        tree: [
+          {
+            id: 1,
+            icon: $globals.icons.zip,
+            name: "nextcloud.zip",
+            children: [
+              {
+                id: 2,
+                name: i18n.t("migration.recipe-1"),
+                icon: $globals.icons.folderOutline,
+                children: [
+                  { id: 3, name: "recipe.json", icon: $globals.icons.codeJson },
+                  { id: 4, name: "full.jpg", icon: $globals.icons.fileImage },
+                  { id: 5, name: "thumb.jpg", icon: $globals.icons.fileImage },
+                ],
+              },
+              {
+                id: 6,
+                name: i18n.t("migration.recipe-2"),
+                icon: $globals.icons.folderOutline,
+                children: [
+                  { id: 7, name: "recipe.json", icon: $globals.icons.codeJson },
+                  { id: 8, name: "full.jpg", icon: $globals.icons.fileImage },
+                  { id: 9, name: "thumb.jpg", icon: $globals.icons.fileImage },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+      [MIGRATIONS.copymethat]: {
+        text: i18n.tc("migration.copymethat.description-long"),
+        acceptedFileType: ".zip",
+        tree: [
+          {
+            id: 1,
+            icon: $globals.icons.zip,
+            name: "Copy_Me_That_20230306.zip",
+            children: [
+              {
+                id: 2,
+                name: "images",
+                icon: $globals.icons.folderOutline,
+                children: [
+                  { id: 3, name: "recipe_1_an5zy.jpg", icon: $globals.icons.fileImage },
+                  { id: 4, name: "recipe_2_82el8.jpg", icon: $globals.icons.fileImage },
+                  { id: 5, name: "recipe_3_j75qg.jpg", icon: $globals.icons.fileImage },
+                ],
+              },
+              { id: 6, name: "recipes.html", icon: $globals.icons.codeJson }
+            ]
+          }
+        ],
+      },
+      [MIGRATIONS.myrecipebox]: {
+        text: i18n.tc("migration.myrecipebox.description-long"),
+        acceptedFileType: ".csv",
+        tree: false,
+      },
+      [MIGRATIONS.nextcloud]: {
+        text: i18n.tc("migration.nextcloud.description-long"),
+        acceptedFileType: ".zip",
+        tree: [
+          {
+            id: 1,
+            icon: $globals.icons.zip,
+            name: "nextcloud.zip",
+            children: [
+              {
+                id: 2,
+                name: i18n.t("migration.recipe-1"),
+                icon: $globals.icons.folderOutline,
+                children: [
+                  { id: 3, name: "recipe.json", icon: $globals.icons.codeJson },
+                  { id: 4, name: "full.jpg", icon: $globals.icons.fileImage },
+                  { id: 5, name: "thumb.jpg", icon: $globals.icons.fileImage },
+                ],
+              },
+              {
+                id: 6,
+                name: i18n.t("migration.recipe-2"),
+                icon: $globals.icons.folderOutline,
+                children: [
+                  { id: 7, name: "recipe.json", icon: $globals.icons.codeJson },
+                  { id: 8, name: "full.jpg", icon: $globals.icons.fileImage },
+                  { id: 9, name: "thumb.jpg", icon: $globals.icons.fileImage },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+      [MIGRATIONS.paprika]: {
+        text: i18n.tc("migration.paprika.description-long"),
+        acceptedFileType: ".zip",
+        tree: false,
+      },
+      [MIGRATIONS.plantoeat]: {
+        text: i18n.tc("migration.plantoeat.description-long"),
+        acceptedFileType: ".zip",
+        tree: [
+          {
+            id: 1,
+            icon: $globals.icons.zip,
+            name: "plantoeat-recipes-508318_10-13-2023.zip",
+            children: [
+                  { id: 9, name: "plantoeat-recipes-508318_10-13-2023.csv", icon: $globals.icons.codeJson },
+            ],
+          }
+        ],
+      },
+      [MIGRATIONS.recipekeeper]: {
+        text: i18n.tc("migration.recipekeeper.description-long"),
+        acceptedFileType: ".zip",
+        tree: [
+          {
+            id: 1,
+            icon: $globals.icons.zip,
+            name: "recipekeeperhtml.zip",
+            children: [
+                  { id: 2, name: "recipes.html", icon: $globals.icons.codeJson },
+                  { id: 3, name: "images", icon: $globals.icons.folderOutline,
+                    children: [
+                    { id: 4, name: "image1.jpg", icon: $globals.icons.fileImage },
+                    { id: 5, name: "image2.jpg", icon: $globals.icons.fileImage },
+                    ]
+                   },
+            ],
+          }
+        ],
+      },
       [MIGRATIONS.tandoor]: {
         text: i18n.tc("migration.tandoor.description-long"),
+        acceptedFileType: ".zip",
         tree: [
           {
             id: 1,
@@ -359,6 +420,7 @@ export default defineComponent({
       } else {
         return {
           text: "",
+          acceptedFileType: ".zip",
           tree: false,
         };
       }
@@ -372,6 +434,11 @@ export default defineComponent({
       deleteReport,
       startMigration,
       getMigrationReports,
+    };
+  },
+  head() {
+    return {
+      title: this.$tc("settings.migrations"),
     };
   },
 });

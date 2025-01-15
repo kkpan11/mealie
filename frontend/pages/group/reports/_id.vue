@@ -9,7 +9,7 @@
     <v-container v-if="report">
       <BaseCardSectionTitle :title="report.name"> </BaseCardSectionTitle>
 
-      <v-card-text> Report Id: {{ id }} </v-card-text>
+      <v-card-text> {{ $t('group.report-with-id', { id:id }) }} </v-card-text>
 
       <v-data-table :headers="itemHeaders" :items="report.entries" :items-per-page="50" show-expand>
         <template #item.success="{ item }">
@@ -21,7 +21,7 @@
           {{ $d(Date.parse(item.timestamp), "short") }}
         </template>
         <template #expanded-item="{ headers, item }">
-          <td class="pa-6" :colspan="headers.length">{{ item.exception }}</td>
+          <td v-if="item.exception" class="pa-6" :colspan="headers.length">{{ item.exception }}</td>
         </template>
       </v-data-table>
     </v-container>
@@ -34,6 +34,7 @@ import { useUserApi } from "~/composables/api";
 import { ReportOut } from "~/lib/api/types/reports";
 
 export default defineComponent({
+  middleware: "auth",
   setup() {
     const route = useRoute();
     const id = route.value.params.id;
